@@ -53,9 +53,9 @@
     </div>
 
     <script>
-        // ปรับการเชื่อมต่อให้ผ่าน พอร์ตปลอดภัย 443 (SSL WebSockets) ป้องกันบราวเซอร์บล็อกสัญญาณ
+        // แก้ไขโครงสร้างพอร์ตเชื่อมต่อให้เป็น 8044 และรัน SSL ป้องกัน Browser บล็อกสัญญาณ
         const broker = "broker.hivemq.com";
-        const port = 443; 
+        const port = 8044; 
         const clientId = "WebClient-" + Math.floor(Math.random() * 10000);
         const topicPV = "sdu440/telemetry/pv";
         const topicSV = "sdu440/telemetry/sv";
@@ -65,7 +65,7 @@
         client.onConnectionLost = onConnectionLost;
         client.onMessageArrived = onMessageArrived;
 
-        // เปิดใช้งาน useSSL: true สำหรับพอร์ต 443
+        // เปิดใช้งาน useSSL: true สำหรับพอร์ตความปลอดภัยสูง 8044
         client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: true });
 
         function onConnect() {
@@ -109,7 +109,7 @@
             document.getElementById("sv-input").value = "";
         }
 
-        // --- ระบบกราฟ Chart.js ---
+        // --- ระบบจัดการกราฟด้วย Chart.js ---
         const ctx = document.getElementById('realtimeChart').getContext('2d');
         const maxDataPoints = 20;
         const chartData = {
