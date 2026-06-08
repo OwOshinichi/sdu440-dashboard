@@ -16,7 +16,7 @@
         .container { width: 100%; max-width: 1000px; }
         header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid var(--border-color); padding-bottom: 15px; }
         h1 { margin: 0; font-size: 1.8rem; color: var(--accent-color); letter-spacing: 1px; }
-        .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-top: 10px; background: var(--danger-color); color: #000; }
+        .status-badge { display: inline-block; padding: 6px 16px; border-radius: 20px; font-size: 0.85rem; font-weight: bold; margin-top: 10px; background: var(--danger-color); color: #000; transition: 0.3s; }
         .connected { background: var(--success-color); }
         
         .main-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 20px; }
@@ -28,14 +28,14 @@
         .value-display { font-family: 'JetBrains+Mono', monospace; font-size: 3.8rem; font-weight: 700; margin: 10px 0; color: var(--success-color); text-align: center; }
         .unit { font-size: 1.4rem; color: #64748b; margin-left: 5px; }
         
-        /* โซนฟอร์มตั้งค่าแบบละเอียด */
+        /* แผงตั้งค่ากลุ่ม Parameter */
         .control-group { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 10px; }
         .control-row { display: flex; align-items: center; justify-content: space-between; background: #0b0f19; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--border-color); }
         .control-label { font-size: 0.95rem; color: #cbd5e1; }
         .control-label span { display: block; font-size: 0.75rem; color: #64748b; }
         .input-wrap { display: flex; align-items: center; gap: 8px; }
         
-        input[type=number] { background: #151f32; border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 6px; font-size: 1.05rem; width: 70px; text-align: center; outline: none; font-family: 'JetBrains+Mono', monospace; }
+        input[type=number] { background: #151f32; border: 1px solid var(--border-color); color: #fff; padding: 8px; border-radius: 6px; font-size: 1.05rem; width: 75px; text-align: center; outline: none; font-family: 'JetBrains+Mono', monospace; }
         input[type=number]:focus { border-color: var(--accent-color); }
         
         button { background-color: var(--accent-color); color: #0b0f19; border: none; padding: 8px 16px; border-radius: 6px; font-size: 0.9rem; font-weight: 700; cursor: pointer; transition: 0.2s; }
@@ -64,50 +64,50 @@
             </div>
 
             <div class="card">
-                <div class="card-title">⚙️ แผงตั้งค่าและปรับแต่งพารามิเตอร์ทั้งหมด</div>
+                <div class="card-title">⚙️ แผงปรับแต่งพารามิเตอร์ตู้ SDU440 ออนไลน์</div>
                 <div class="control-group">
                     
                     <div class="control-row">
-                        <div class="control-label">ค่าเป้าหมายหลัก <span>(SV - Set Value)</span></div>
+                        <div class="control-label">ค่าอุณหภูมิเป้าหมาย <span>(SV - Set Value)</span></div>
                         <div class="input-wrap">
                             <span class="current-tag" id="sv-current">--</span>
-                            <input type="number" id="sv-input" step="0.1">
+                            <input type="number" id="sv-input" step="1">
                             <button onclick="sendParam('sv', 'sv-input')">SET</button>
                         </div>
                     </div>
 
                     <div class="control-row" style="border-left: 4px solid var(--danger-color);">
-                        <div class="control-label">แจ้งเตือนสูงเกิน <span>(AL1 - Alarm 1 High)</span></div>
+                        <div class="control-label">ระบบแจ้งเตือนที่ 1 <span>(AL1 - Alarm 1)</span></div>
                         <div class="input-wrap">
                             <span class="current-tag" id="al1-current" style="color:var(--danger-color)">--</span>
-                            <input type="number" id="al1-input">
+                            <input type="number" id="al1-input" step="1">
                             <button class="btn-danger" onclick="sendParam('al1', 'al1-input')">SET</button>
                         </div>
                     </div>
 
                     <div class="control-row" style="border-left: 4px solid var(--warn-color);">
-                        <div class="control-label">แจ้งเตือนต่ำเกิน <span>(AL2 - Alarm 2 Low)</span></div>
+                        <div class="control-label">ระบบแจ้งเตือนที่ 2 <span>(AL2 - Alarm 2)</span></div>
                         <div class="input-wrap">
                             <span class="current-tag" id="al2-current" style="color:var(--warn-color)">--</span>
-                            <input type="number" id="al2-input">
+                            <input type="number" id="al2-input" step="1">
                             <button class="btn-warn" onclick="sendParam('al2', 'al2-input')">SET</button>
                         </div>
                     </div>
 
                     <div class="control-row">
-                        <div class="control-label">ส่วนต่างแจ้งเตือน <span>(AHy - Alarm Hysteresis)</span></div>
+                        <div class="control-label">ส่วนต่างการเตือน <span>(AHy - Alarm Hysteresis)</span></div>
                         <div class="input-wrap">
                             <span class="current-tag" id="ahy-current">--</span>
-                            <input type="number" id="ahy-input" step="0.1">
+                            <input type="number" id="ahy-input" step="1">
                             <button onclick="sendParam('ahy', 'ahy-input')">SET</button>
                         </div>
                     </div>
 
                     <div class="control-row">
-                        <div class="control-label">ส่วนต่างควบคุม ON/OFF <span>(HYS - Hysteresis)</span></div>
+                        <div class="control-label">ส่วนต่างควบคุมคุมคั่ง <span>(HYS - Control Hysteresis)</span></div>
                         <div class="input-wrap">
                             <span class="current-tag" id="hys-current">--</span>
-                            <input type="number" id="hys-input" step="0.1">
+                            <input type="number" id="hys-input" step="1">
                             <button onclick="sendParam('hys', 'hys-input')">SET</button>
                         </div>
                     </div>
@@ -118,12 +118,12 @@
     </div>
 
     <script>
-        // ดึงค่า Config จริงตามประวัติการเชื่อมต่อสำเร็จของคุณ
+        // บังคับการเชื่อมต่อให้ตรงกับเซิร์ฟเวอร์จริงและเปิดใช้ระบบ SSL (Port 8884)
         const broker = "mqtt-dashboard.com";
         const port = 8884; 
         const clientId = "WebAdvancedClient-" + Math.floor(Math.random() * 10000);
 
-        // แผนผังโครงสร้างการเชื่อมต่อ Topics (Telemetry = ขารับจากบอร์ด / Command = ขาส่งสั่งงาน)
+        // แผนผัง Topics ที่สอดรับกับตัวแปรบนบอร์ด ESP32 v7.0 แบบ 100%
         const topics = {
             telemetry: {
                 pv: "sdu440/telemetry/pv", sv: "sdu440/telemetry/sv",
@@ -140,28 +140,32 @@
         client.onConnectionLost = onConnectionLost;
         client.onMessageArrived = onMessageArrived;
 
+        // เชื่อมต่อด้วย SSL เพื่อความเสถียรบน GitHub Pages
         client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: true });
 
         function onConnect() {
             console.log("MQTT Connected Successfully!");
-            document.getElementById("status").innerText = "เชื่อมต่อระบบ Cloud สำเร็จ (พารามิเตอร์ครบครัน)";
+            document.getElementById("status").innerText = "เชื่อมต่อคลาวด์สำเร็จ (ระบบควบคุมพร้อมใช้งาน)";
             document.getElementById("status").className = "status-badge connected";
             
-            // สั่งดักฟังข้อมูลขารับ (Telemetry) ทุกตัวพร้อมกัน
+            // สั่งทำการดักฟังสัญญาณจากกลุ่มหัวข้อ Telemetry ทั้งหมดที่บอร์ดส่งขึ้นมา
             Object.values(topics.telemetry).forEach(t => client.subscribe(t));
         }
 
         function onFailure(err) {
+            console.log("MQTT Connection Failed", err);
             document.getElementById("status").innerText = "การเชื่อมต่อล้มเหลว (กำลังลองใหม่อัตโนมัติ...)";
+            document.getElementById("status").className = "status-badge";
             setTimeout(() => client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: true }), 3000);
         }
 
         function onConnectionLost(res) {
-            document.getElementById("status").innerText = "การเชื่อมต่อหลุด!";
+            console.log("MQTT Lost Connection");
+            document.getElementById("status").innerText = "การเชื่อมต่อหลุดจากเซิร์ฟเวอร์!";
             document.getElementById("status").className = "status-badge";
         }
 
-        // ฟังก์ชันรับข้อมูลจากบอร์ดมาสลับเปลี่ยนตัวเลขบนหน้าจอแบบแยกประเภท
+        // รับค่าสัญญาณที่อัปเดตมาจากบอร์ดมาแสดงผลแยกแต่ละช่องตัวแปร
         function onMessageArrived(message) {
             const payload = message.payloadString;
             const topic = message.destinationName;
@@ -182,20 +186,20 @@
             }
         }
 
-        // ฟังก์ชันส่วนกลางสำหรับส่งคำสั่งปรับค่าออนไลน์
+        // ฟังก์ชันส่วนกลางเมื่อผู้ใช้พิมพ์ข้อมูลและกดปุ่ม SET สั่งออนไลน์ข้ามโลก
         function sendParam(paramName, inputId) {
             const inputVal = document.getElementById(inputId).value;
-            if (!inputVal) return alert("กรุณากรอกตัวเลขพารามิเตอร์ก่อนกดตั้งค่า!");
+            if (!inputVal) return alert("กรุณากรอกตัวเลขก่อนกดตั้งค่า!");
 
             const message = new Paho.MQTT.Message(inputVal);
             message.destinationName = topics.command[paramName];
             client.send(message);
             
-            alert(`ส่งคำสั่งตั้งค่า ${paramName.toUpperCase()} = ${inputVal} เรียบร้อยแล้ว!`);
+            alert(`ยิงคำสั่งตั้งค่า ${paramName.toUpperCase()} = ${inputVal} สำเร็จ!`);
             document.getElementById(inputId).value = "";
         }
 
-        // --- ระบบวาดกราฟเส้น Chart.js ---
+        // --- ระบบจัดทำกราฟ Chart.js ---
         const ctx = document.getElementById('realtimeChart').getContext('2d');
         const chartData = { labels: [], datasets: [{ label: 'PV (°C)', data: [], borderColor: '#4ade80', borderWidth: 2, tension: 0.2, fill: false }] };
         const myChart = new Chart(ctx, {
