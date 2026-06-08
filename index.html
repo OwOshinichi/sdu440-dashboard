@@ -53,9 +53,9 @@
     </div>
 
     <script>
-        // แก้ไขโครงสร้างพอร์ตเชื่อมต่อให้เป็น 8044 และรัน SSL ป้องกัน Browser บล็อกสัญญาณ
+        // ใช้การเชื่อมต่อสเปกเดียวกับหน้าต่างเทสท์ HiveMQ ที่คุณเปิดติดเป๊ะๆ 
         const broker = "broker.hivemq.com";
-        const port = 8044; 
+        const port = 8000; // กลับมาใช้พอร์ตมาตรฐานของ WebSocket
         const clientId = "WebClient-" + Math.floor(Math.random() * 10000);
         const topicPV = "sdu440/telemetry/pv";
         const topicSV = "sdu440/telemetry/sv";
@@ -65,8 +65,8 @@
         client.onConnectionLost = onConnectionLost;
         client.onMessageArrived = onMessageArrived;
 
-        // เปิดใช้งาน useSSL: true สำหรับพอร์ตความปลอดภัยสูง 8044
-        client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: true });
+        // เชื่อมต่อแบบเปิดเผยพอร์ตปกติ ไม่ล็อก SSL ปิดกั้นระบบเครือข่าย
+        client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: false });
 
         function onConnect() {
             console.log("MQTT Connected!");
@@ -78,7 +78,11 @@
 
         function onFailure(err) {
             console.log("Connect failed", err);
-            document.getElementById("status").innerText = "การเชื่อมต่อล้มเหลว (ลองกดรีเฟรชหน้าเว็บ)";
+            document.getElementById("status").innerText = "การเชื่อมต่อล้มเหลว (กำลังลองใหม่อัตโนมัติ...)";
+            // หากเชื่อมต่อพอร์ตปกติไม่สำเร็จ ให้ทำการรีคอนเนคแบบออโต้
+            setTimeout(function() {
+                client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: false });
+            }, 3000);
         }
 
         function onConnectionLost(responseObject) {
@@ -132,7 +136,7 @@
                 responsive: true,
                 scales: {
                     x: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' } },
-                    y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, suggestMin: 20, suggestMax: 45 }
+                    y: { grid: { color: '#334155' }, ticks: { color: '#94a3b8' }, suggestMin: 15, suggestMax: 45 }
                 },
                 plugins: { legend: { labels: { color: '#f8fafc' } } }
             }
