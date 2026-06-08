@@ -53,9 +53,9 @@
     </div>
 
     <script>
-        // ใช้การเชื่อมต่อสเปกเดียวกับหน้าต่างเทสท์ HiveMQ ที่คุณเปิดติดเป๊ะๆ 
-        const broker = "broker.hivemq.com";
-        const port = 8000; // กลับมาใช้พอร์ตมาตรฐานของ WebSocket
+        // แก้ไขตามข้อมูลจริงจากบอร์ดของคุณ: ใช้ mqtt-dashboard.com และพอร์ตปลอดภัย 8884
+        const broker = "mqtt-dashboard.com";
+        const port = 8884; 
         const clientId = "WebClient-" + Math.floor(Math.random() * 10000);
         const topicPV = "sdu440/telemetry/pv";
         const topicSV = "sdu440/telemetry/sv";
@@ -65,8 +65,8 @@
         client.onConnectionLost = onConnectionLost;
         client.onMessageArrived = onMessageArrived;
 
-        // เชื่อมต่อแบบเปิดเผยพอร์ตปกติ ไม่ล็อก SSL ปิดกั้นระบบเครือข่าย
-        client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: false });
+        // เปิดใช้งานระบบรักษาความปลอดภัย SSL (useSSL: true) ตามแบบพอร์ต 8884
+        client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: true });
 
         function onConnect() {
             console.log("MQTT Connected!");
@@ -79,9 +79,8 @@
         function onFailure(err) {
             console.log("Connect failed", err);
             document.getElementById("status").innerText = "การเชื่อมต่อล้มเหลว (กำลังลองใหม่อัตโนมัติ...)";
-            // หากเชื่อมต่อพอร์ตปกติไม่สำเร็จ ให้ทำการรีคอนเนคแบบออโต้
             setTimeout(function() {
-                client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: false });
+                client.connect({ onSuccess: onConnect, onFailure: onFailure, useSSL: true });
             }, 3000);
         }
 
