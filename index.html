@@ -1,0 +1,243 @@
+!DOCTYPE html
+html lang=th
+head
+    meta charset=UTF-8
+    meta name=viewport content=width=device-width, initial-scale=1.0
+    titleSDU440 Cloud Control Dashboardtitle
+    script src=httpscdnjs.cloudflare.comajaxlibspaho-mqtt1.0.1mqttws31.min.js type=textjavascriptscript
+    script src=httpscdn.jsdelivr.netnpmchart.jsscript
+    link href=httpsfonts.googleapis.comcss2family=JetBrains+Monowght@400;700&family=Promptwght@300;500;700&display=swap rel=stylesheet
+    
+    style
+        root {
+            --bg-color #0f172a;
+            --card-bg #1e293b;
+            --text-color #f8fafc;
+            --accent-color #38bdf8;
+            --success-color #4ade80;
+        }
+        body {
+            font-family 'Prompt', sans-serif;
+            background-color var(--bg-color);
+            color var(--text-color);
+            margin 0;
+            padding 20px;
+            display flex;
+            flex-direction column;
+            align-items center;
+        }
+        .container {
+            width 100%;
+            max-width 800px;
+        }
+        header {
+            text-align center;
+            margin-bottom 25px;
+        }
+        h1 { margin 0; font-size 1.8rem; color var(--accent-color); }
+        .status-badge {
+            display inline-block;
+            padding 5px 12px;
+            border-radius 20px;
+            font-size 0.85rem;
+            margin-top 8px;
+            background #ff4757;
+        }
+        .connected { background var(--success-color); color #000; }
+        
+         Layout 
+        .grid {
+            display grid;
+            grid-template-columns 1fr 1fr;
+            gap 20px;
+            margin-bottom 20px;
+        }
+        @media (max-width 600px) { .grid { grid-template-columns 1fr; } }
+        
+        .card {
+            background-color var(--card-bg);
+            border-radius 16px;
+            padding 20px;
+            box-shadow 0 4px 6px -1px rgb(0 0 0  0.1);
+            text-align center;
+        }
+        .value-display {
+            font-family 'JetBrains+Mono', monospace;
+            font-size 3.5rem;
+            font-weight 700;
+            margin 10px 0;
+            color var(--success-color);
+        }
+        .unit { font-size 1.5rem; color #94a3b8; }
+        
+         Control Form 
+        input[type=number] {
+            background #0f172a;
+            border 2px solid #334155;
+            color #fff;
+            padding 12px;
+            border-radius 8px;
+            font-size 1.2rem;
+            width 60%;
+            text-align center;
+            outline none;
+            font-family 'JetBrains+Mono', monospace;
+        }
+        input[type=number]focus { border-color var(--accent-color); }
+        button {
+            background var(--accent-color);
+            color #0f172a;
+            border none;
+            padding 12px 24px;
+            border-radius 8px;
+            font-size 1rem;
+            font-weight 700;
+            cursor pointer;
+            margin-left 10px;
+            transition 0.2s;
+        }
+        buttonhover { opacity 0.9; transform scale(1.02); }
+        .chart-card { width 100%; box-sizing border-box; }
+    style
+head
+body
+
+div class=container
+    header
+        h1SDU440 IoT Cloud Gatewayh1
+        div id=status class=status-badgeกำลังเชื่อมต่อ MQTT...div
+    header
+
+    div class=grid
+        div class=card
+            h3อุณหภูมิปัจจุบัน (PV)h3
+            div class=value-displayspan id=pv-val--spanspan class=unit°Cspandiv
+        div
+
+        div class=card
+            h3ตั้งค่าอุณหภูมิเป้าหมาย (SV)h3
+            div style=margin 20px 0;
+                input type=number id=sv-input placeholder=ระบุค่า SV
+                button onclick=sendSV()SETbutton
+            div
+            p style=font-size 0.9rem; color #94a3b8;ค่าปัจจุบันบนบอร์ด span id=sv-current style=color#fff; font-weightbold;--span °Cp
+        div
+    div
+
+    div class=card chart-card
+        h3กราฟแสดงผลอุณหภูมิแบบ Real-timeh3
+        canvas id=realtimeChart style=max-height 280px;canvas
+    div
+div
+
+script
+     --- ตั้งค่าระบบเชื่อมต่อ MQTT (ใช้ WebSocket Port ของ HiveMQ) ---
+    const broker = broker.hivemq.com;
+    const port = 8000;  สำหรับ Web Browser ต้องใช้ Port WebSocket (8000) เท่านั้น ห้ามใช้ 1883
+    const clientId = WebClient- + Math.floor(Math.random()  10000);
+    
+    const topicPV = sdu440telemetrypv;
+    const topicSV = sdu440telemetrysv;
+    const topicCmd = sdu440commandsv;
+
+    const client = new Paho.MQTT.Client(broker, port, clientId);
+
+    client.onConnectionLost = onConnectionLost;
+    client.onMessageArrived = onMessageArrived;
+
+    client.connect({
+        onSuccess onConnect,
+        onFailure onFailure,
+        useSSL false
+    });
+
+    function onConnect() {
+        console.log(MQTT Connected!);
+        document.getElementById(status).innerText = เชื่อมต่อระบบ Cloud สำเร็จ;
+        document.getElementById(status).classList.add(connected);
+         สั่งติดตาม (Subscribe) ข้อมูลจาก ESP32
+        client.subscribe(topicPV);
+        client.subscribe(topicSV);
+    }
+
+    function onFailure(err) {
+        console.log(Connect failed, err);
+        document.getElementById(status).innerText = การเชื่อมต่อล้มเหลว กำลังลองใหม่...;
+    }
+
+    function onConnectionLost(responseObject) {
+        if (responseObject.errorCode !== 0) {
+            document.getElementById(status).innerText = การเชื่อมต่อหลุด!;
+            document.getElementById(status).classList.remove(connected);
+        }
+    }
+
+     ฟังก์ชันเมื่อมีข้อมูลวิ่งมาจาก ESP32
+    function onMessageArrived(message) {
+        const payload = message.payloadString;
+        const topic = message.destinationName;
+
+        if (topic === topicPV) {
+            document.getElementById(pv-val).innerText = payload;
+            updateChartData(parseFloat(payload));
+        } else if (topic === topicSV) {
+            document.getElementById(sv-current).innerText = payload;
+        }
+    }
+
+     ฟังก์ชันส่งค่าสั่งงาน (Publish) กลับไปหาบอร์ด ESP32
+    function sendSV() {
+        const inputVal = document.getElementById(sv-input).value;
+        if (!inputVal) return alert(กรุณากรอกตัวเลขก่อนกดตั้งค่า!);
+        
+        const message = new Paho.MQTT.Message(inputVal);
+        message.destinationName = topicCmd;
+        client.send(message);
+        alert(ส่งคำสั่งตั้งค่า SV =  + inputVal +  เรียบร้อยแล้ว!);
+        document.getElementById(sv-input).value = ;
+    }
+
+     --- ส่วนการจัดการกราฟ Chart.js ---
+    const ctx = document.getElementById('realtimeChart').getContext('2d');
+    const maxDataPoints = 30;
+    const chartData = {
+        labels [],
+        datasets [{
+            label 'อุณหภูมิปัจจุบัน (PV)',
+            data [],
+            borderColor '#4ade80',
+            backgroundColor 'rgba(74, 222, 128, 0.1)',
+            borderWidth 2,
+            tension 0.3,
+            fill true
+        }]
+    };
+
+    const config = {
+        type 'line',
+        data chartData,
+        options {
+            responsive true,
+            scales {
+                x { grid { display false }, ticks { color '#94a3b8' } },
+                y { grid { color '#334155' }, ticks { color '#94a3b8' } }
+            },
+            plugins { legend { labels { color '#fff' } } }
+        }
+    };
+    const myChart = new Chart(ctx, config);
+
+    function updateChartData(val) {
+        const now = new Date().toLocaleTimeString([], { hour '2-digit', minute '2-digit', second '2-digit' });
+        if (chartData.labels.length = maxDataPoints) {
+            chartData.labels.shift();
+            chartData.datasets[0].data.shift();
+        }
+        chartData.labels.push(now);
+        chartData.datasets[0].data.push(val);
+        myChart.update();
+    }
+script
+
+body
+html
