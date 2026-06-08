@@ -186,16 +186,27 @@
         };
 
         let currentSV = 0;
+        
         client.onMessageArrived = (m) => {
             const p = m.payloadString; const t = m.destinationName;
-            const log = document.getElementById("debug-log");
             
             if(t===topics.t.status) {
                 if(p==="false"){ document.getElementById("status").innerText = "Modbus ตู้ไม่ตอบสนอง"; document.getElementById("status").className = "status-tag"; }
                 else { document.getElementById("status").innerText = "ระบบออนไลน์สมบูรณ์"; document.getElementById("status").className = "status-tag ok"; }
             }
-            else if(t===topics.t.pv) { document.getElementById("v-pv").innerText = p; pushGraphData(parseInt(p), currentSV); }
-            else if(t===topics.t.sv) { currentSV = parseInt(p); document.getElementById("v-sv").innerText = p; document.getElementById("v-sv-tag").innerText = p; }
+            else if(t===topics.t.pv) { 
+                document.getElementById("v-pv").innerText = p; 
+                let cleanPV = parseInt(p);
+                if(isNaN(cleanPV)) cleanPV = 0;
+                pushGraphData(cleanPV, currentSV); // เรียกฟังก์ชันใหม่ที่อัปเดตทั้งข้อมูลและแกนเวลาคู่กัน
+            }
+            else if(t===topics.t.sv) { 
+                let cleanSV = parseInt(p);
+                if(isNaN(cleanSV)) cleanSV = 0;
+                currentSV = cleanSV; 
+                document.getElementById("v-sv").innerText = p; 
+                document.getElementById("v-sv-tag").innerText = p; 
+            }
             else if(t===topics.t.mv) document.getElementById("v-mv").innerText = p + " %";
             else if(t===topics.t.p) document.getElementById("v-p").innerText = (parseFloat(p)/10.0).toFixed(1);
             else if(t===topics.t.i) document.getElementById("v-i").innerText = p;
@@ -237,21 +248,47 @@
             document.getElementById("debug-log").innerHTML += `<br>>> [DEBUG] ยิงทะลวงโครงสร้าง REG 0x${reg} = ${val}`;
         }
 
-        // --- ระบบจัดเจนวาดกราฟ REAL-TIME 120 จุดบนเว็บบราวเซอร์อินเตอร์เฟส ---
+        // --- 📊 แก้ไขระบบโครงสร้างกราฟและระบบอัปเดตแกนข้อมูล ---
         const ctx = document.getElementById('mqttChart').getContext('2d');
         const chart = new Chart(ctx, {
             type: 'line',
-            data: { labels: Array(120).fill(""), datasets: [
-                { label: 'PV (อุณหภูมิจริง)', data: [], borderColor: '#4ade80', borderWidth: 2, tension: 0.1, pointRadius: 0 },
-                { label: 'SV (ค่าเป้าหมาย)', data: [], borderColor: '#38bdf8', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0 }
-            ]},
-            options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { grid: { color: '#1f2937' }, ticks: { color: '#9ca3af' } } }, plugins: { legend: { labels: { color: '#fff' } } } }
+            data: { 
+                labels: [], // เริ่มต้นจากอาร์เรย์เปล่าเพื่อให้แกนเวลาขยับสร้างตัวเองแบบไดนามิก
+                datasets: [
+                    { label: 'PV (อุณหภูมิจริง)', data: [], borderColor: '#4ade80', borderWidth: 2, tension: 0.2, pointRadius: 0 },
+                    { label: 'SV (ค่าเป้าหมาย)', data: [], borderColor: '#38bdf8', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0 }
+                ]
+            },
+            options: { 
+                responsive: true, 
+                maintainAspectRatio: false, 
+                scales: { 
+                    x: { display: false }, 
+                    y: { grid: { color: '#1f2937' }, ticks: { color: '#9ca3af' } } 
+                }, 
+                plugins: { legend: { labels: { color: '#fff' } } } 
+            }
         });
 
         function pushGraphData(pv, sv) {
-            if (chart.data.datasets[0].data.length >= 120) { chart.data.datasets[0].data.shift(); chart.data.datasets[1].data.shift(); }
-            chart.data.datasets[0].data.push(pv); chart.data.datasets[1].data.push(sv);
-            chart.update('none'); // อัปเดตแบบสมูท
+            // ดึงเวลาปัจจุบันเพื่อทำเป็นป้ายกำกับแกนเวลาแบบเรียลไทม์
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0') + ':' + now.getSeconds().toString().padStart(2, '0');
+
+            // จัดการคุมบัฟเฟอร์ข้อมูลไม่ให้เกิน 120 จุด
+            if (chart.data.labels.length >= 120) {
+                chart.data.labels.shift();
+                chart.data.datasets[0].data.shift();
+                chart.data.datasets[1].data.shift();
+            }
+
+            // พล็อตค่าชุดใหม่ลงอาร์เรย์ของกราฟตรงๆ
+            chart.data.labels.push(timeStr);
+            chart.data.datasets[0].data.push(pv);
+            chart.data.datasets[1].data.push(sv);
+            
+            // สั่งเรนเดอร์กราฟใหม่ทันทีเพื่อไม่ให้เส้นค้างหลุดจอ
+            chart.update();
         }
     </script>
 </body>
