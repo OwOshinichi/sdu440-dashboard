@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDU440 MQTT Mission Dashboard v5</title>
+    <title>SDU440 MQTT Enterprise Control v5</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Prompt:wght@300;500;700&display=swap" rel="stylesheet">
@@ -15,27 +15,21 @@
         h1 { margin: 0; font-size: 1.5rem; color: var(--accent); }
         .status-tag { padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; background: var(--danger); color: #000; }
         .status-tag.ok { background: var(--success); }
-        
         .panel-3x { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
         .monitor-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; text-align: center; }
         .monitor-title { font-size: 0.85rem; color: #9ca3af; margin-bottom: 5px; }
         .monitor-val { font-family: 'JetBrains Mono', monospace; font-size: 2.5rem; font-weight: 700; color: var(--success); }
-        
         .main-layout { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; }
         @media(max-width: 968px) { .main-layout { grid-template-columns: 1fr; } .panel-3x { grid-template-columns: 1fr; } }
-        
         .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; height: fit-content; }
         .card h2 { font-size: 1.05rem; margin-top: 0; color: #cbd5e1; border-left: 4px solid var(--accent); padding-left: 8px; margin-bottom: 15px; }
-        
         .row { display: flex; align-items: center; justify-content: space-between; background: #090d16; padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border); }
         .label { font-size: 0.9rem; color: #cbd5e1; }
         .label span { display: block; font-size: 0.75rem; color: #6b7280; }
-        
         .action { display: flex; align-items: center; gap: 8px; }
         .tag { font-family: 'JetBrains Mono', monospace; background: #1f2937; padding: 3px 8px; border-radius: 4px; font-size: 0.9rem; min-width: 45px; text-align: center; color: #9ca3af; }
         input { background: #111827; border: 1px solid var(--border); color: #fff; padding: 6px; border-radius: 4px; width: 65px; text-align: center; font-family: 'JetBrains Mono', monospace; }
         button { background: var(--accent); color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        
         .tabs { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
         .tab-btn { background: none; border: 1px solid var(--border); color: #9ca3af; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 0.85rem; }
         .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
@@ -66,10 +60,10 @@
 
                 <div class="card">
                     <h2>⚙️ โครงสร้างฮาร์ดแวร์ตู้คอนโทรล</h2>
-                    <div class="row"><div class="label">ชนิดเซ็นเซอร์อินพุต <span>(InPt - Sensor Type)</span></div><div class="action"><span class="tag" id="v-inpt" style="min-width:125px;">--</span></div></div>
+                    <div class="row"><div class="label">ชนิดเซ็นเซอร์อินพุต <span>(InPt)</span></div><div class="action"><span class="tag" id="v-inpt" style="min-width:125px;">--</span></div></div>
                     <div class="row"><div class="label">หน่วยวัดอุณหภูมิ <span>(UnIt)</span></div><div class="action"><span class="tag" id="v-unit">--</span></div></div>
                     <div class="row"><div class="label">ตำแหน่งจุดทศนิยม <span>(dP)</span></div><div class="action"><span class="tag" id="v-dp">--</span></div></div>
-                    <div class="row"><div class="label">ขีดจำกัดหน้าสเกลตู้ควบคุม</div><div class="action">High: <span class="tag" id="v-sch">--</span> Low: <span class="tag" id="v-scl">--</span></div></div>
+                    <div class="row"><div class="label">ขีดจำกัดสเกล</div><div class="action">High: <span class="tag" id="v-sch">--</span> Low: <span class="tag" id="v-scl">--</span></div></div>
                 </div>
             </div>
 
@@ -82,23 +76,20 @@
 
                 <div id="t-basic" class="tab-content active">
                     <div class="row">
-                        <div class="label">ปรับเปลี่ยนค่าเป้าหมาย <span>(SV - Target Setpoint)</span></div>
+                        <div class="label">ปรับเปลี่ยนค่าเป้าหมาย <span>(SV)</span></div>
                         <div class="action"><span class="tag" id="v-sv-tag">--</span><input type="number" id="i-sv"><button onclick="send('sv','i-sv')">SET</button></div>
                     </div>
-                    <div class="row" style="border-left: 4px solid var(--danger);">
-                        <div class="label">Alarm 1 Setpoint <span>(AL1 - ขีดเตือนบน)</span></div>
-                        <div class="action"><span class="tag" id="v-al1">--</span><input type="number" id="i-al1"><button onclick="send('al1','i-al1')">SET</button></div>
-                    </div>
+                    
                     <div class="row"><div class="label">โหมดโครงสร้างการเตือน 1 <span>(ALS1)</span></div><div class="action"><span class="tag" id="v-als1" style="min-width:120px; font-size:0.8rem;">--</span></div></div>
                     
                     <div class="row" style="border-left: 4px solid var(--warn);">
-                        <div class="label">Alarm 2 Setpoint <span>(AL2 - ขีดเตือนล่าง)</span></div>
+                        <div class="label">Alarm 2 Setpoint <span>(AL2)</span></div>
                         <div class="action"><span class="tag" id="v-al2">--</span><input type="number" id="i-al2"><button onclick="send('al2','i-al2')">SET</button></div>
                     </div>
                     <div class="row"><div class="label">โหมดโครงสร้างการเตือน 2 <span>(ALS2)</span></div><div class="action"><span class="tag" id="v-als2" style="min-width:120px; font-size:0.8rem;">--</span></div></div>
                     
                     <div class="row">
-                        <div class="label">ส่วนต่างรีเซ็ตสัญญาณเตือน 1 <span>(HyS1 / AHy)</span></div>
+                        <div class="label">ส่วนต่างรีเซ็ตสัญญาณเตือน 1 <span>(HyS1)</span></div>
                         <div class="action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button onclick="send('hys1','i-hys1')">SET</button></div>
                     </div>
                     <div class="row">
@@ -108,51 +99,17 @@
                 </div>
 
                 <div id="t-tuning" class="tab-content">
-                    <div class="row">
-                        <div class="label">ค่า Proportional Band <span>(P Parameter)</span></div>
-                        <div class="action"><span class="tag" id="v-p">--</span><input type="number" id="i-p"><button onclick="send('p','i-p')">SET</button></div>
-                    </div>
-                    <div class="row">
-                        <div class="label">ค่า Integral Time <span>(I Parameter)</span></div>
-                        <div class="action"><span class="tag" id="v-i">--</span><input type="number" id="i-i"><button onclick="send('i','i-i')">SET</button></div>
-                    </div>
-                    <div class="row">
-                        <div class="label">ค่า Derivative Time <span>(D Parameter)</span></div>
-                        <div class="action"><span class="tag" id="v-d">--</span><input type="number" id="i-d"><button onclick="send('d','i-d')">SET</button></div>
-                    </div>
-                    <div class="row">
-                        <div class="label">Control Hysteresis <span>(HyS - คุมช่วงตัดต่อตัดทาง)</span></div>
-                        <div class="action"><span class="tag" id="v-hys">--</span><input type="number" id="i-hys"><button onclick="send('hys','i-hys')">SET</button></div>
-                    </div>
-                    <div class="row">
-                        <div class="label">รอบสัญญาณเวลาเอาต์พุต <span>(CP - Cycle Time)</span></div>
-                        <div class="action"><span class="tag" id="v-cp">--</span><input type="number" id="i-cp"><button onclick="send('cp','i-cp')">SET</button></div>
-                    </div>
-                    <div class="row">
-                        <div class="label">ตัวจับเวลาจำกัดกระบวนการ <span>(tIm - Timer)</span></div>
-                        <div class="action"><span class="tag" id="v-tim">--</span><input type="number" id="i-tim"><button onclick="send('tim','i-tim')">SET</button></div>
-                    </div>
-                    <div class="row">
-                        <div class="label">สลับหน้าสัญญาณร้อน/เย็น <span>(CACt - Action Mode)</span></div>
-                        <div class="action"><span class="tag" id="v-cact" style="min-width:120px; font-size:0.8rem;">--</span><input type="number" id="i-cact" placeholder="0/1"><button onclick="send('cact','i-cact')">SET</button></div>
-                    </div>
-                    <div class="row">
-                        <div class="label">สัญญานรันโหมด Auto-Tuning <span>(AT Loop)</span></div>
-                        <div class="action"><span class="tag" id="v-at" style="min-width:110px;">--</span><input type="number" id="i-at" placeholder="0/1"><button onclick="send('at','i-at')">SET</button></div>
-                    </div>
+                    <div class="row"><div class="label">Proportional Band (P)</div><div class="action"><span class="tag" id="v-p">--</span><input type="number" id="i-p"><button onclick="send('p','i-p')">SET</button></div></div>
+                    <div class="row"><div class="label">Integral Time (I)</div><div class="action"><span class="tag" id="v-i">--</span><input type="number" id="i-i"><button onclick="send('i','i-i')">SET</button></div></div>
+                    <div class="row"><div class="label">Derivative Time (D)</div><div class="action"><span class="tag" id="v-d">--</span><input type="number" id="i-d"><button onclick="send('d','i-d')">SET</button></div></div>
+                    <div class="row"><div class="label">Control Hysteresis (HyS)</div><div class="action"><span class="tag" id="v-hys">--</span><input type="number" id="i-hys"><button onclick="send('hys','i-hys')">SET</button></div></div>
+                    <div class="row"><div class="label">Cycle Time (CP)</div><div class="action"><span class="tag" id="v-cp">--</span><input type="number" id="i-cp"><button onclick="send('cp','i-cp')">SET</button></div></div>
                 </div>
 
                 <div id="t-debug" class="tab-content">
-                    <p style="font-size:0.85rem; color:#9ca3af; margin:0 0 10px 0;">ระบบยิงตรงเข้าเลขฐาน 16 ทะลวงตรงผ่านช่องคำสั่งรวมบอร์ด (จะรันคำสั่งล็อก PASS อัตโนมัติในฝั่งบอร์ด)</p>
-                    <div class="row" style="flex-direction:column; align-items:flex-start; gap:8px;">
-                        <span class="label">เขียนสั่งค่า Register ทะลุคลาวด์:</span>
-                        <div class="action">
-                            Reg (Hex): <input type="text" id="d-reg" value="001D" style="width:70px;"> 
-                            Val: <input type="number" id="d-val" value="50">
-                            <button onclick="sendDebug()">SEND DIRECT</button>
-                        </div>
-                    </div>
-                    <div class="console-box" id="debug-log">>> กำลังฟีดทราฟฟิกระบบออนไลน์จากคลาวด์...</div>
+                    <p style="font-size:0.8rem; color:#9ca3af;">คำสั่งยิงตรง Register (Hex)</p>
+                    <div class="row"><div class="action">Reg:<input type="text" id="d-reg" value="001D" style="width:50px;"> Val:<input type="number" id="d-val" value="50" style="width:50px;"><button onclick="sendDebug()">SEND</button></div></div>
+                    <div class="console-box" id="debug-log">>> พร้อมใช้งาน</div>
                 </div>
             </div>
         </div>
@@ -174,121 +131,53 @@
         const clientId = "WebClientSDU440-" + Math.floor(Math.random() * 10000);
         
         const topics = {
-            t: { pv:"sdu440/telemetry/pv", sv:"sdu440/telemetry/sv", mv:"sdu440/telemetry/mv", p:"sdu440/telemetry/p", i:"sdu440/telemetry/i", d:"sdu440/telemetry/d", hys:"sdu440/telemetry/hys", al1:"sdu440/telemetry/al1", al2:"sdu440/telemetry/al2", cp:"sdu440/telemetry/cp", tim:"sdu440/telemetry/tim", at:"sdu440/telemetry/at", inpt:"sdu440/telemetry/inpt", unit:"sdu440/telemetry/unit", dp:"sdu440/telemetry/dp", sch:"sdu440/telemetry/sch", scl:"sdu440/telemetry/scl", als1:"sdu440/telemetry/als1", hys1:"sdu440/telemetry/hys1", als2:"sdu440/telemetry/als2", hys2:"sdu440/telemetry/hys2", cact:"sdu440/telemetry/cact", status:"sdu440/telemetry/status" },
-            c: { sv:"sdu440/command/sv", p:"sdu440/command/p", i:"sdu440/command/i", d:"sdu440/command/d", hys:"sdu440/command/hys", al1:"sdu440/command/al1", al2:"sdu440/command/al2", cp:"sdu440/command/cp", tim:"sdu440/command/tim", at:"sdu440/command/at", hys1:"sdu440/command/hys1", hys2:"sdu440/command/hys2", cact:"sdu440/command/cact", debug:"sdu440/command/debug" }
+            t: { pv:"sdu440/telemetry/pv", sv:"sdu440/telemetry/sv", mv:"sdu440/telemetry/mv", p:"sdu440/telemetry/p", i:"sdu440/telemetry/i", d:"sdu440/telemetry/d", hys:"sdu440/telemetry/hys", al2:"sdu440/telemetry/al2", cp:"sdu440/telemetry/cp", tim:"sdu440/telemetry/tim", at:"sdu440/telemetry/at", inpt:"sdu440/telemetry/inpt", unit:"sdu440/telemetry/unit", dp:"sdu440/telemetry/dp", sch:"sdu440/telemetry/sch", scl:"sdu440/telemetry/scl", als1:"sdu440/telemetry/als1", hys1:"sdu440/telemetry/hys1", als2:"sdu440/telemetry/als2", hys2:"sdu440/telemetry/hys2", cact:"sdu440/telemetry/cact", status:"sdu440/telemetry/status" },
+            c: { sv:"sdu440/command/sv", p:"sdu440/command/p", i:"sdu440/command/i", d:"sdu440/command/d", hys:"sdu440/command/hys", al2:"sdu440/command/al2", cp:"sdu440/command/cp", tim:"sdu440/command/tim", at:"sdu440/command/at", hys1:"sdu440/command/hys1", hys2:"sdu440/command/hys2", cact:"sdu440/command/cact", debug:"sdu440/command/debug" }
         };
 
         const client = new Paho.MQTT.Client(broker, port, clientId);
+        client.onConnectionLost = () => { document.getElementById("status").innerText = "เชื่อมต่อหลุด!"; document.getElementById("status").className = "status-tag"; };
         
-        client.onConnectionLost = () => { 
-            document.getElementById("status").innerText = "การเชื่อมต่อเซิร์ฟเวอร์หลุด!"; 
-            document.getElementById("status").className = "status-tag"; 
-        };
-
         let currentSV = 0;
-        
         client.onMessageArrived = (m) => {
             const p = m.payloadString; const t = m.destinationName;
-            
-            if(t===topics.t.status) {
-                if(p==="false"){ document.getElementById("status").innerText = "Modbus ตู้ไม่ตอบสนอง"; document.getElementById("status").className = "status-tag"; }
-                else { document.getElementById("status").innerText = "ระบบออนไลน์สมบูรณ์"; document.getElementById("status").className = "status-tag ok"; }
-            }
-            else if(t===topics.t.pv) { 
-                document.getElementById("v-pv").innerText = p; 
-                let cleanPV = parseInt(p);
-                if(isNaN(cleanPV)) cleanPV = 0;
-                pushGraphData(cleanPV, currentSV); // เรียกฟังก์ชันใหม่ที่อัปเดตทั้งข้อมูลและแกนเวลาคู่กัน
-            }
-            else if(t===topics.t.sv) { 
-                let cleanSV = parseInt(p);
-                if(isNaN(cleanSV)) cleanSV = 0;
-                currentSV = cleanSV; 
-                document.getElementById("v-sv").innerText = p; 
-                document.getElementById("v-sv-tag").innerText = p; 
-            }
+            if(t===topics.t.status) { document.getElementById("status").innerText = (p==="false"?"Modbus ไม่ตอบสนอง":"ระบบออนไลน์"); document.getElementById("status").className = (p==="false"?"status-tag":"status-tag ok"); }
+            else if(t===topics.t.pv) { document.getElementById("v-pv").innerText = p; pushGraphData(parseInt(p)||0, currentSV); }
+            else if(t===topics.t.sv) { currentSV = parseInt(p)||0; document.getElementById("v-sv").innerText = p; document.getElementById("v-sv-tag").innerText = p; }
             else if(t===topics.t.mv) document.getElementById("v-mv").innerText = p + " %";
             else if(t===topics.t.p) document.getElementById("v-p").innerText = (parseFloat(p)/10.0).toFixed(1);
             else if(t===topics.t.i) document.getElementById("v-i").innerText = p;
             else if(t===topics.t.d) document.getElementById("v-d").innerText = p;
             else if(t===topics.t.hys) document.getElementById("v-hys").innerText = p;
-            else if(t===topics.t.al1) document.getElementById("v-al1").innerText = p;
             else if(t===topics.t.al2) document.getElementById("v-al2").innerText = p;
             else if(t===topics.t.cp) document.getElementById("v-cp").innerText = p;
-            else if(t===topics.t.tim) document.getElementById("v-tim").innerText = p;
             else if(t===topics.t.hys1) document.getElementById("v-hys1").innerText = p;
             else if(t===topics.t.hys2) document.getElementById("v-hys2").innerText = p;
-            else if(t===topics.t.sch) document.getElementById("v-sch").innerText = p;
-            else if(t===topics.t.scl) document.getElementById("v-scl").innerText = p;
-            else if(t===topics.t.dp) document.getElementById("v-dp").innerText = p;
-            else if(t===topics.t.unit) document.getElementById("v-unit").innerText = p === "1" ? "°F" : "°C";
-            else if(t===topics.t.inpt) document.getElementById("v-inpt").innerText = inputNames[parseInt(p)] || "Unknown";
             else if(t===topics.t.als1) document.getElementById("v-als1").innerText = alarmNames[parseInt(p)] || "Unknown";
             else if(t===topics.t.als2) document.getElementById("v-als2").innerText = alarmNames[parseInt(p)] || "Unknown";
-            else if(t===topics.t.at) document.getElementById("v-at").innerText = atNames[parseInt(p)] || "Unknown";
-            else if(t===topics.t.cact) document.getElementById("v-cact").innerText = p === "0" ? "Reverse/Heating" : "Direct/Cooling";
         };
 
-        client.connect({ onSuccess: () => { 
-            document.getElementById("status").innerText = "เชื่อมต่อระบบคลาวด์สำเร็จ"; document.getElementById("status").className = "status-tag ok";
-            Object.values(topics.t).forEach(top => client.subscribe(top));
-        }, onFailure: () => { setTimeout(() => location.reload(), 3000); }, useSSL: true });
+        client.connect({ onSuccess: () => { document.getElementById("status").innerText = "ออนไลน์"; document.getElementById("status").className = "status-tag ok"; Object.values(topics.t).forEach(top => client.subscribe(top)); }, onFailure: () => { setTimeout(() => location.reload(), 3000); }, useSSL: true });
 
         function send(param, inputId) {
-            const v = document.getElementById(inputId).value; if(!v) return alert("กรุณาใส่ค่าตัวเลข");
+            const v = document.getElementById(inputId).value;
             const m = new Paho.MQTT.Message(v); m.destinationName = topics.c[param]; client.send(m);
             document.getElementById(inputId).value = "";
-            document.getElementById("debug-log").innerHTML += `<br>>> [CMD] ส่งคำสั่งเซ็ต ${param} = ${v}`;
         }
 
         function sendDebug() {
-            const reg = document.getElementById("d-reg").value; const val = document.getElementById("d-val").value;
-            if(!reg || !val) return alert("กรุณากรอกข้อมูลให้ครบถ้วน");
-            const m = new Paho.MQTT.Message(`${reg},${val}`); m.destinationName = topics.c.debug; client.send(m);
-            document.getElementById("debug-log").innerHTML += `<br>>> [DEBUG] ยิงทะลวงโครงสร้าง REG 0x${reg} = ${val}`;
+            const m = new Paho.MQTT.Message(`${document.getElementById("d-reg").value},${document.getElementById("d-val").value}`);
+            m.destinationName = topics.c.debug; client.send(m);
         }
 
-        // --- 📊 แก้ไขระบบโครงสร้างกราฟและระบบอัปเดตแกนข้อมูล ---
-        const ctx = document.getElementById('mqttChart').getContext('2d');
-        const chart = new Chart(ctx, {
-            type: 'line',
-            data: { 
-                labels: [], // เริ่มต้นจากอาร์เรย์เปล่าเพื่อให้แกนเวลาขยับสร้างตัวเองแบบไดนามิก
-                datasets: [
-                    { label: 'PV (อุณหภูมิจริง)', data: [], borderColor: '#4ade80', borderWidth: 2, tension: 0.2, pointRadius: 0 },
-                    { label: 'SV (ค่าเป้าหมาย)', data: [], borderColor: '#38bdf8', borderWidth: 1.5, borderDash: [4, 4], pointRadius: 0 }
-                ]
-            },
-            options: { 
-                responsive: true, 
-                maintainAspectRatio: false, 
-                scales: { 
-                    x: { display: false }, 
-                    y: { grid: { color: '#1f2937' }, ticks: { color: '#9ca3af' } } 
-                }, 
-                plugins: { legend: { labels: { color: '#fff' } } } 
-            }
+        const chart = new Chart(document.getElementById('mqttChart').getContext('2d'), {
+            type: 'line', data: { labels: [], datasets: [{ label: 'PV', data: [], borderColor: '#4ade80', pointRadius: 0 }, { label: 'SV', data: [], borderColor: '#38bdf8', borderDash: [4,4], pointRadius: 0 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { x: { display: false }, y: { grid: { color: '#1f2937' } } } }
         });
 
         function pushGraphData(pv, sv) {
-            // ดึงเวลาปัจจุบันเพื่อทำเป็นป้ายกำกับแกนเวลาแบบเรียลไทม์
-            const now = new Date();
-            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0') + ':' + now.getSeconds().toString().padStart(2, '0');
-
-            // จัดการคุมบัฟเฟอร์ข้อมูลไม่ให้เกิน 120 จุด
-            if (chart.data.labels.length >= 120) {
-                chart.data.labels.shift();
-                chart.data.datasets[0].data.shift();
-                chart.data.datasets[1].data.shift();
-            }
-
-            // พล็อตค่าชุดใหม่ลงอาร์เรย์ของกราฟตรงๆ
-            chart.data.labels.push(timeStr);
-            chart.data.datasets[0].data.push(pv);
-            chart.data.datasets[1].data.push(sv);
-            
-            // สั่งเรนเดอร์กราฟใหม่ทันทีเพื่อไม่ให้เส้นค้างหลุดจอ
-            chart.update();
+            if (chart.data.labels.length >= 120) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); chart.data.datasets[1].data.shift(); }
+            chart.data.labels.push(""); chart.data.datasets[0].data.push(pv); chart.data.datasets[1].data.push(sv); chart.update();
         }
     </script>
 </body>
