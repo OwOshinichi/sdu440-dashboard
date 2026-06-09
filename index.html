@@ -1,3 +1,6 @@
+นี่คือโค้ดฉบับเต็มที่เอาส่วน **Alarm 2 Setpoint (AL2)** ออกเรียบร้อยแล้วครับ โดยระบบเลือกโหมดเตือน (Alarm Mode) ของ ALS1 และ ALS2 รวมถึงส่วนอื่น ๆ ยังอยู่ครบถ้วนครับ
+
+```html
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -28,12 +31,9 @@
         .label span { display: block; font-size: 0.75rem; color: #6b7280; }
         .action { display: flex; align-items: center; gap: 8px; }
         .tag { font-family: 'JetBrains Mono', monospace; background: #1f2937; padding: 3px 8px; border-radius: 4px; font-size: 0.9rem; min-width: 45px; text-align: center; color: #9ca3af; }
-        
-        /* เพิ่มสไตล์สำหรับ input และ select */
         input, select { background: #111827; border: 1px solid var(--border); color: #fff; padding: 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
         input { width: 65px; text-align: center; }
         select { font-family: 'Prompt', sans-serif; font-size: 0.85rem; cursor: pointer; }
-        
         button { background: var(--accent); color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         .tabs { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
         .tab-btn { background: none; border: 1px solid var(--border); color: #9ca3af; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 0.85rem; }
@@ -102,11 +102,6 @@
                             <button onclick="send('als1','i-als1')">SET</button>
                         </div>
                     </div>
-                    
-                    <div class="row" style="border-left: 4px solid var(--warn);">
-                        <div class="label">Alarm 2 Setpoint <span>(AL2)</span></div>
-                        <div class="action"><span class="tag" id="v-al2">--</span><input type="number" id="i-al2"><button onclick="send('al2','i-al2')">SET</button></div>
-                    </div>
 
                     <div class="row" style="border-left: 4px solid var(--warn);">
                         <div class="label">โหมดโครงสร้างการเตือน 2 <span>(ALS2)</span></div>
@@ -169,9 +164,8 @@
         const clientId = "WebClientSDU440-" + Math.floor(Math.random() * 10000);
         
         const topics = {
-            t: { pv:"sdu440/telemetry/pv", sv:"sdu440/telemetry/sv", mv:"sdu440/telemetry/mv", p:"sdu440/telemetry/p", i:"sdu440/telemetry/i", d:"sdu440/telemetry/d", hys:"sdu440/telemetry/hys", al2:"sdu440/telemetry/al2", cp:"sdu440/telemetry/cp", tim:"sdu440/telemetry/tim", at:"sdu440/telemetry/at", inpt:"sdu440/telemetry/inpt", unit:"sdu440/telemetry/unit", dp:"sdu440/telemetry/dp", sch:"sdu440/telemetry/sch", scl:"sdu440/telemetry/scl", als1:"sdu440/telemetry/als1", hys1:"sdu440/telemetry/hys1", als2:"sdu440/telemetry/als2", hys2:"sdu440/telemetry/hys2", cact:"sdu440/telemetry/cact", status:"sdu440/telemetry/status" },
-            // เพิ่ม als1 และ als2 ในหมวด command
-            c: { sv:"sdu440/command/sv", p:"sdu440/command/p", i:"sdu440/command/i", d:"sdu440/command/d", hys:"sdu440/command/hys", al2:"sdu440/command/al2", cp:"sdu440/command/cp", tim:"sdu440/command/tim", at:"sdu440/command/at", hys1:"sdu440/command/hys1", hys2:"sdu440/command/hys2", cact:"sdu440/command/cact", als1:"sdu440/command/als1", als2:"sdu440/command/als2", debug:"sdu440/command/debug" }
+            t: { pv:"sdu440/telemetry/pv", sv:"sdu440/telemetry/sv", mv:"sdu440/telemetry/mv", p:"sdu440/telemetry/p", i:"sdu440/telemetry/i", d:"sdu440/telemetry/d", hys:"sdu440/telemetry/hys", cp:"sdu440/telemetry/cp", tim:"sdu440/telemetry/tim", at:"sdu440/telemetry/at", inpt:"sdu440/telemetry/inpt", unit:"sdu440/telemetry/unit", dp:"sdu440/telemetry/dp", sch:"sdu440/telemetry/sch", scl:"sdu440/telemetry/scl", als1:"sdu440/telemetry/als1", hys1:"sdu440/telemetry/hys1", als2:"sdu440/telemetry/als2", hys2:"sdu440/telemetry/hys2", cact:"sdu440/telemetry/cact", status:"sdu440/telemetry/status" },
+            c: { sv:"sdu440/command/sv", p:"sdu440/command/p", i:"sdu440/command/i", d:"sdu440/command/d", hys:"sdu440/command/hys", cp:"sdu440/command/cp", tim:"sdu440/command/tim", at:"sdu440/command/at", hys1:"sdu440/command/hys1", hys2:"sdu440/command/hys2", cact:"sdu440/command/cact", als1:"sdu440/command/als1", als2:"sdu440/command/als2", debug:"sdu440/command/debug" }
         };
 
         const client = new Paho.MQTT.Client(broker, port, clientId);
@@ -188,7 +182,6 @@
             else if(t===topics.t.i) document.getElementById("v-i").innerText = p;
             else if(t===topics.t.d) document.getElementById("v-d").innerText = p;
             else if(t===topics.t.hys) document.getElementById("v-hys").innerText = p;
-            else if(t===topics.t.al2) document.getElementById("v-al2").innerText = p;
             else if(t===topics.t.cp) document.getElementById("v-cp").innerText = p;
             else if(t===topics.t.hys1) document.getElementById("v-hys1").innerText = p;
             else if(t===topics.t.hys2) document.getElementById("v-hys2").innerText = p;
@@ -201,7 +194,6 @@
         function send(param, inputId) {
             const v = document.getElementById(inputId).value;
             const m = new Paho.MQTT.Message(v); m.destinationName = topics.c[param]; client.send(m);
-            // ยกเลิกการล้างค่าถ้าเป็น Dropdown เพื่อให้มันค้างค่าที่ผู้ใช้เลือกไว้จนกว่าข้อมูลจริงจากตู้จะวิ่งมาทับ
             if(document.getElementById(inputId).tagName !== "SELECT") {
                 document.getElementById(inputId).value = "";
             }
@@ -224,3 +216,5 @@
     </script>
 </body>
 </html>
+
+```
