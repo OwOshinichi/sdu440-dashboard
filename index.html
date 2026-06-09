@@ -192,7 +192,6 @@
         const inputNames = ["K-Type TC","J-Type TC","E-Type TC","N-Type TC","C-Type TC","T-Type TC","K-Type 0.1","R-Type TC","S-Type TC","B-Type TC","JIS Pt100","DIN Pt100","JIS Pt100 0.1","DIN Pt100 0.1","1-5V dc"];
         const alarmNames = ["Off","High -HI-","Standby Hi -SH-","Low -LO-","Standby Lo -SL-","Dev Hi -Hd-","Dev Lo -Ld-","Deviation -dE-","End Timer -tm-"];
 
-        // Setup Chart
         const ctx = document.getElementById('mqttChart').getContext('2d');
         const mqttChart = new Chart(ctx, {
             type: 'line',
@@ -209,8 +208,9 @@
             mqttChart.update();
         }
 
+        // --- แก้ไขจุดนี้: ใช้ wss:// และพอร์ต 8884 สำหรับ HTTPS ---
         const broker = "broker.hivemq.com"; 
-        const port = 8000;
+        const port = 8884; 
         const clientId = "WebClientSDU440-" + Math.floor(Math.random() * 10000);
         
         const topics = {
@@ -247,13 +247,18 @@
             else if(t===topics.t.scl) document.getElementById("v-scl").innerText = p;
         };
 
-        client.connect({ onSuccess: () => { 
-            document.getElementById("status").innerText = "ออนไลน์"; 
-            document.getElementById("status").className = "status-tag ok"; 
-            Object.values(topics.t).forEach(top => client.subscribe(top)); 
-        }, onFailure: () => { 
-            setTimeout(() => location.reload(), 3000); 
-        }});
+        // --- แก้ไขจุดนี้: ใส่ useSSL: true เพื่อเปิดใช้งาน WSS ---
+        client.connect({ 
+            useSSL: true,
+            onSuccess: () => { 
+                document.getElementById("status").innerText = "ออนไลน์"; 
+                document.getElementById("status").className = "status-tag ok"; 
+                Object.values(topics.t).forEach(top => client.subscribe(top)); 
+            }, 
+            onFailure: () => { 
+                setTimeout(() => location.reload(), 3000); 
+            }
+        });
 
         function send(param, inputId) {
             const v = document.getElementById(inputId).value;
