@@ -61,7 +61,7 @@
                 </div>
 
                 <div class="card">
-                    <h2>⚙️ โครงสร้างฮาร์ดแวร์ตู้คอนโทรล</h2>
+                    <h2>⚙️ โครงสร้างฮาร์ดแวร์</h2>
                     <div class="row">
                         <div class="label">ชนิดเซ็นเซอร์อินพุต <span>(InPt)</span></div>
                         <div class="action">
@@ -111,12 +111,12 @@
 
                 <div id="t-basic" class="tab-content active">
                     <div class="row">
-                        <div class="label">ปรับเปลี่ยนค่าเป้าหมาย <span>(SV)</span></div>
+                        <div class="label">ค่าเป้าหมาย <span>(SV)</span></div>
                         <div class="action"><span class="tag" id="v-sv-tag">--</span><input type="number" id="i-sv"><button onclick="send('sv','i-sv')">SET</button></div>
                     </div>
                     
                     <div class="row" style="border-left: 4px solid var(--danger);">
-                        <div class="label">โหมดโครงสร้างการเตือน 1 <span>(ALS1)</span></div>
+                        <div class="label">โหมด AL 1 <span>(ALS1)</span></div>
                         <div class="action">
                             <span class="tag" id="v-als1" style="min-width:100px; font-size:0.8rem;">--</span>
                             <select id="i-als1">
@@ -130,7 +130,7 @@
                     </div>
 
                     <div class="row" style="border-left: 4px solid var(--warn);">
-                        <div class="label">โหมดโครงสร้างการเตือน 2 <span>(ALS2)</span></div>
+                        <div class="label">โหมด AL 2 <span>(ALS2)</span></div>
                         <div class="action">
                             <span class="tag" id="v-als2" style="min-width:100px; font-size:0.8rem;">--</span>
                             <select id="i-als2">
@@ -143,8 +143,8 @@
                         </div>
                     </div>
                     
-                    <div class="row"><div class="label">ส่วนต่างรีเซ็ตเตือน 1 <span>(HyS1)</span></div><div class="action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button onclick="send('hys1','i-hys1')">SET</button></div></div>
-                    <div class="row"><div class="label">ส่วนต่างรีเซ็ตเตือน 2 <span>(HyS2)</span></div><div class="action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button onclick="send('hys2','i-hys2')">SET</button></div></div>
+                    <div class="row"><div class="label"> ค่า AL 1 <span>(HyS1)</span></div><div class="action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button onclick="send('hys1','i-hys1')">SET</button></div></div>
+                    <div class="row"><div class="label">ค่า AL 2 <span>(HyS2)</span></div><div class="action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button onclick="send('hys2','i-hys2')">SET</button></div></div>
                 </div>
 
                 <div id="t-tuning" class="tab-content">
