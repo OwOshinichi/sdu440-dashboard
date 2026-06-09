@@ -1,10 +1,9 @@
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDU440 MQTT Enterprise Control v5</title>
+    <title>SDU440 Full Specification Dashboard</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Prompt:wght@300;500;700&display=swap" rel="stylesheet">
@@ -12,23 +11,20 @@
         :root { --bg: #090d16; --card: #111827; --border: #1f2937; --text: #f3f4f6; --accent: #38bdf8; --success: #4ade80; --danger: #f87171; --warn: #fbbf24; }
         body { font-family: 'Prompt', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
         .wrapper { width: 100%; max-width: 1200px; }
-        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 20px; }
         h1 { margin: 0; font-size: 1.5rem; color: var(--accent); }
         .status-tag { padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; background: var(--danger); color: #000; }
         .status-tag.ok { background: var(--success); }
         .panel-3x { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
         .monitor-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; text-align: center; }
-        .monitor-title { font-size: 0.85rem; color: #9ca3af; margin-bottom: 5px; }
         .monitor-val { font-family: 'JetBrains Mono', monospace; font-size: 2.5rem; font-weight: 700; color: var(--success); }
         .main-layout { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; }
         @media(max-width: 968px) { .main-layout { grid-template-columns: 1fr; } .panel-3x { grid-template-columns: 1fr; } }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; height: fit-content; }
-        .card h2 { font-size: 1.05rem; margin-top: 0; color: #cbd5e1; border-left: 4px solid var(--accent); padding-left: 8px; margin-bottom: 15px; }
-        .row { display: flex; align-items: center; justify-content: space-between; background: #090d16; padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border); }
+        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+        .row { display: flex; align-items: center; justify-content: space-between; background: #090d16; padding: 10px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border); }
         .label { font-size: 0.9rem; color: #cbd5e1; }
-        .label span { display: block; font-size: 0.75rem; color: #6b7280; }
         .action { display: flex; align-items: center; gap: 8px; }
-        .tag { font-family: 'JetBrains Mono', monospace; background: #1f2937; padding: 3px 8px; border-radius: 4px; font-size: 0.9rem; min-width: 45px; text-align: center; color: #9ca3af; }
+        .tag { font-family: 'JetBrains Mono', monospace; background: #1f2937; padding: 3px 8px; border-radius: 4px; font-size: 0.9rem; min-width: 50px; text-align: center; color: #9ca3af; }
         input, select { background: #111827; border: 1px solid var(--border); color: #fff; padding: 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
         input { width: 65px; text-align: center; }
         select { font-family: 'Prompt', sans-serif; font-size: 0.85rem; cursor: pointer; }
@@ -38,109 +34,64 @@
         .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
-        .console-box { background: #05070f; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; height: 110px; overflow-y: auto; color: var(--success); margin-top: 10px; }
     </style>
 </head>
 <body>
     <div class="wrapper">
         <header>
-            <h1>SDU440 MQTT Enterprise Control v5</h1>
-            <div id="status" class="status-tag">กำลังเริ่มระบบการเชื่อมต่อ SSL...</div>
+            <h1>SDU440 System Hub</h1>
+            <div id="status" class="status-tag">กำลังเชื่อมต่อ...</div>
         </header>
 
         <div class="panel-3x">
-            <div class="monitor-card"><div class="monitor-title">🔥 อุณหภูมิปัจจุบัน (PV)</div><div class="monitor-val" id="v-pv">--</div></div>
-            <div class="monitor-card"><div class="monitor-title">🎯 ค่าเป้าหมาย (SV)</div><div class="monitor-val" id="v-sv" style="color:var(--accent)">--</div></div>
-            <div class="monitor-card"><div class="monitor-title">⚡ กำลังเอาต์พุต (MV)</div><div class="monitor-val" id="v-mv" style="color:var(--warn)">--</div></div>
+            <div class="monitor-card"><div style="color:#9ca3af;">🔥 PV (อุณหภูมิจริง)</div><div class="monitor-val" id="v-pv">--</div></div>
+            <div class="monitor-card"><div style="color:#9ca3af;">🎯 SV (ค่าเป้าหมาย)</div><div class="monitor-val" id="v-sv" style="color:var(--accent)">--</div></div>
+            <div class="monitor-card"><div style="color:#9ca3af;">⚡ MV (เอาต์พุต %)</div><div class="monitor-val" id="v-mv" style="color:var(--warn)">--</div></div>
         </div>
 
         <div class="main-layout">
-            <div style="display:flex; flex-direction:column; gap:20px;">
-                <div class="card">
-                    <h2>📈 กราฟประวัติแนวโน้ม (Temperature Historical Chart)</h2>
-                    <div style="position: relative; width:100%; height:230px;"><canvas id="mqttChart"></canvas></div>
-                </div>
-
-                <div class="card">
-                    <h2>⚙️ โครงสร้างฮาร์ดแวร์ตู้คอนโทรล</h2>
-                    <div class="row"><div class="label">ชนิดเซ็นเซอร์อินพุต <span>(InPt)</span></div><div class="action"><span class="tag" id="v-inpt" style="min-width:125px;">--</span></div></div>
-                    <div class="row"><div class="label">หน่วยวัดอุณหภูมิ <span>(UnIt)</span></div><div class="action"><span class="tag" id="v-unit">--</span></div></div>
-                    <div class="row"><div class="label">ตำแหน่งจุดทศนิยม <span>(dP)</span></div><div class="action"><span class="tag" id="v-dp">--</span></div></div>
-                    <div class="row"><div class="label">ขีดจำกัดสเกล</div><div class="action">High: <span class="tag" id="v-sch">--</span> Low: <span class="tag" id="v-scl">--</span></div></div>
-                </div>
+            <div class="card">
+                <div style="position: relative; width:100%; height:300px;"><canvas id="mqttChart"></canvas></div>
             </div>
 
             <div class="card">
                 <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('t-basic')">🎛️ พารามิเตอร์ตู้</button>
-                    <button class="tab-btn" onclick="switchTab('t-tuning')">🛠️ ระบบ Tuning & PID</button>
-                    <button class="tab-btn" onclick="switchTab('t-debug')">💻 Debug Tool</button>
+                    <button class="tab-btn active" onclick="switchTab('t-op')">การทำงาน</button>
+                    <button class="tab-btn" onclick="switchTab('t-alarm')">Alarms</button>
+                    <button class="tab-btn" onclick="switchTab('t-tune')">PID</button>
+                    <button class="tab-btn" onclick="switchTab('t-ext')">ตั้งค่าระบบ</button>
                 </div>
 
-                <div id="t-basic" class="tab-content active">
-                    <div class="row">
-                        <div class="label">ปรับเปลี่ยนค่าเป้าหมาย <span>(SV)</span></div>
-                        <div class="action"><span class="tag" id="v-sv-tag">--</span><input type="number" id="i-sv"><button onclick="send('sv','i-sv')">SET</button></div>
-                    </div>
-                    
-                    <div class="row" style="border-left: 4px solid var(--danger);">
-                        <div class="label">โหมดโครงสร้างการเตือน 1 <span>(ALS1)</span></div>
-                        <div class="action">
-                            <span class="tag" id="v-als1" style="min-width:100px; font-size:0.8rem;">--</span>
-                            <select id="i-als1">
-                                <option value="0">Off (ปิด)</option>
-                                <option value="1">High (HI)</option>
-                                <option value="2">Standby Hi (SH)</option>
-                                <option value="3">Low (LO)</option>
-                                <option value="4">Standby Lo (SL)</option>
-                                <option value="5">Dev Hi (Hd)</option>
-                                <option value="6">Dev Lo (Ld)</option>
-                                <option value="7">Deviation (dE)</option>
-                            </select>
-                            <button onclick="send('als1','i-als1')">SET</button>
-                        </div>
-                    </div>
-
-                    <div class="row" style="border-left: 4px solid var(--warn);">
-                        <div class="label">โหมดโครงสร้างการเตือน 2 <span>(ALS2)</span></div>
-                        <div class="action">
-                            <span class="tag" id="v-als2" style="min-width:100px; font-size:0.8rem;">--</span>
-                            <select id="i-als2">
-                                <option value="0">Off (ปิด)</option>
-                                <option value="1">High (HI)</option>
-                                <option value="2">Standby Hi (SH)</option>
-                                <option value="3">Low (LO)</option>
-                                <option value="4">Standby Lo (SL)</option>
-                                <option value="5">Dev Hi (Hd)</option>
-                                <option value="6">Dev Lo (Ld)</option>
-                                <option value="7">Deviation (dE)</option>
-                            </select>
-                            <button onclick="send('als2','i-als2')">SET</button>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="label">Alarm 1 <span>(HyS1)</span></div>
-                        <div class="action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button onclick="send('hys1','i-hys1')">SET</button></div>
-                    </div>
-                    <div class="row">
-                        <div class="label">Alarm 2 <span>(HyS2)</span></div>
-                        <div class="action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button onclick="send('hys2','i-hys2')">SET</button></div>
-                    </div>
+                <div id="t-op" class="tab-content active">
+                    <div class="row"><div class="label">ค่าเป้าหมายหลัก (SV)</div><div class="action"><span class="tag" id="v-sv-tag">--</span><input type="number" id="i-sv"><button onclick="send('sv','i-sv')">SET</button></div></div>
+                    <div class="row"><div class="label">โหมด Auto-Tuning (AT)</div><div class="action"><span class="tag" id="v-at">--</span><select id="i-at"><option value="0">0: Stop</option><option value="1">1: Start AT</option></select><button onclick="send('at','i-at')">SET</button></div></div>
+                    <div class="row"><div class="label">ตัวจับเวลา (tIm) นาที</div><div class="action"><span class="tag" id="v-tim">--</span><input type="number" id="i-tim"><button onclick="send('tim','i-tim')">SET</button></div></div>
                 </div>
 
-                <div id="t-tuning" class="tab-content">
-                    <div class="row"><div class="label">Proportional Band (P)</div><div class="action"><span class="tag" id="v-p">--</span><input type="number" id="i-p"><button onclick="send('p','i-p')">SET</button></div></div>
+                <div id="t-alarm" class="tab-content">
+                    <div class="row" style="border-left: 4px solid var(--danger);"><div class="label">โหมดการเตือน 1 (ALS1)</div><div class="action"><span class="tag" id="v-als1">--</span><select id="i-als1"><option value="0">Off</option><option value="1">High (HI)</option><option value="2">Std Hi (SH)</option><option value="3">Low (LO)</option><option value="4">Std Lo (SL)</option><option value="5">Dev Hi (Hd)</option><option value="6">Dev Lo (Ld)</option><option value="7">Dev (dE)</option></select><button onclick="send('als1','i-als1')">SET</button></div></div>
+                    <div class="row" style="border-left: 4px solid var(--danger);"><div class="label">ค่า Setpoint เตือน 1 (AL1)</div><div class="action"><span class="tag" id="v-al1">--</span><input type="number" id="i-al1"><button onclick="send('al1','i-al1')">SET</button></div></div>
+                    <div class="row" style="border-left: 4px solid var(--danger);"><div class="label">ส่วนต่างรีเซ็ต 1 (HyS1)</div><div class="action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button onclick="send('hys1','i-hys1')">SET</button></div></div>
+                    
+                    <div class="row" style="border-left: 4px solid var(--warn); margin-top: 15px;"><div class="label">โหมดการเตือน 2 (ALS2)</div><div class="action"><span class="tag" id="v-als2">--</span><select id="i-als2"><option value="0">Off</option><option value="1">High (HI)</option><option value="2">Std Hi (SH)</option><option value="3">Low (LO)</option><option value="4">Std Lo (SL)</option><option value="5">Dev Hi (Hd)</option><option value="6">Dev Lo (Ld)</option><option value="7">Dev (dE)</option></select><button onclick="send('als2','i-als2')">SET</button></div></div>
+                    <div class="row" style="border-left: 4px solid var(--warn);"><div class="label">ค่า Setpoint เตือน 2 (AL2)</div><div class="action"><span class="tag" id="v-al2">--</span><input type="number" id="i-al2"><button onclick="send('al2','i-al2')">SET</button></div></div>
+                    <div class="row" style="border-left: 4px solid var(--warn);"><div class="label">ส่วนต่างรีเซ็ต 2 (HyS2)</div><div class="action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button onclick="send('hys2','i-hys2')">SET</button></div></div>
+                </div>
+
+                <div id="t-tune" class="tab-content">
+                    <div class="row"><div class="label">Proportional (P)</div><div class="action"><span class="tag" id="v-p">--</span><input type="number" id="i-p"><button onclick="send('p','i-p')">SET</button></div></div>
                     <div class="row"><div class="label">Integral Time (I)</div><div class="action"><span class="tag" id="v-i">--</span><input type="number" id="i-i"><button onclick="send('i','i-i')">SET</button></div></div>
                     <div class="row"><div class="label">Derivative Time (D)</div><div class="action"><span class="tag" id="v-d">--</span><input type="number" id="i-d"><button onclick="send('d','i-d')">SET</button></div></div>
-                    <div class="row"><div class="label">Control Hysteresis (HyS)</div><div class="action"><span class="tag" id="v-hys">--</span><input type="number" id="i-hys"><button onclick="send('hys','i-hys')">SET</button></div></div>
-                    <div class="row"><div class="label">Cycle Time (CP)</div><div class="action"><span class="tag" id="v-cp">--</span><input type="number" id="i-cp"><button onclick="send('cp','i-cp')">SET</button></div></div>
+                    <div class="row"><div class="label">ON/OFF Hysteresis (HyS)</div><div class="action"><span class="tag" id="v-hys">--</span><input type="number" id="i-hys"><button onclick="send('hys','i-hys')">SET</button></div></div>
+                    <div class="row"><div class="label">Control Period (CP)</div><div class="action"><span class="tag" id="v-cp">--</span><input type="number" id="i-cp"><button onclick="send('cp','i-cp')">SET</button></div></div>
+                    <div class="row"><div class="label">Control Mode (CACt)</div><div class="action"><span class="tag" id="v-cact">--</span><select id="i-cact"><option value="0">0: Reverse/Heat</option><option value="1">1: Direct/Cool</option></select><button onclick="send('cact','i-cact')">SET</button></div></div>
                 </div>
 
-                <div id="t-debug" class="tab-content">
-                    <p style="font-size:0.8rem; color:#9ca3af;">คำสั่งยิงตรง Register (Hex)</p>
-                    <div class="row"><div class="action">Reg:<input type="text" id="d-reg" value="001D" style="width:50px;"> Val:<input type="number" id="d-val" value="50" style="width:50px;"><button onclick="sendDebug()">SEND</button></div></div>
-                    <div class="console-box" id="debug-log">>> พร้อมใช้งาน</div>
+                <div id="t-ext" class="tab-content">
+                    <div class="row"><div class="label">Sensor Type (InPt)</div><div class="action"><span class="tag" id="v-inpt">--</span><select id="i-inpt"><option value="0">0: K-Type</option><option value="1">1: J-Type</option><option value="10">10: Pt100</option></select><button onclick="send('inpt','i-inpt')">SET</button></div></div>
+                    <div class="row"><div class="label">Temperature Unit (UnIt)</div><div class="action"><span class="tag" id="v-unit">--</span><select id="i-unit"><option value="0">0: °C</option><option value="1">1: °F</option></select><button onclick="send('unit','i-unit')">SET</button></div></div>
+                    <div class="row"><div class="label">Decimal Point (dP)</div><div class="action"><span class="tag" id="v-dp">--</span><input type="number" id="i-dp" placeholder="0-3"><button onclick="send('dp','i-dp')">SET</button></div></div>
+                    <div class="row"><div class="label">Scale High Limit</div><div class="action"><span class="tag" id="v-sch">--</span></div></div>
                 </div>
             </div>
         </div>
@@ -154,52 +105,65 @@
             event.currentTarget.classList.add('active');
         }
 
-        const inputNames = ["K-Type TC","J-Type TC","E-Type TC","N-Type TC","C-Type TC","T-Type TC","K-Type 0.1","R-Type TC","S-Type TC","B-Type TC","JIS Pt100","DIN Pt100","JIS Pt100 0.1","DIN Pt100 0.1","1-5V dc"];
-        const alarmNames = ["Off","High -HI-","Standby Hi -SH-","Low -LO-","Standby Lo -SL-","Dev Hi -Hd-","Dev Lo -Ld-","Deviation -dE-","End Timer -tm-"];
-        const atNames = ["Stop","AT Running","Timer ON","Timer End"];
-
-        const broker = "mqtt-dashboard.com"; const port = 8884;
-        const clientId = "WebClientSDU440-" + Math.floor(Math.random() * 10000);
-        
-        const topics = {
-            t: { pv:"sdu440/telemetry/pv", sv:"sdu440/telemetry/sv", mv:"sdu440/telemetry/mv", p:"sdu440/telemetry/p", i:"sdu440/telemetry/i", d:"sdu440/telemetry/d", hys:"sdu440/telemetry/hys", cp:"sdu440/telemetry/cp", tim:"sdu440/telemetry/tim", at:"sdu440/telemetry/at", inpt:"sdu440/telemetry/inpt", unit:"sdu440/telemetry/unit", dp:"sdu440/telemetry/dp", sch:"sdu440/telemetry/sch", scl:"sdu440/telemetry/scl", als1:"sdu440/telemetry/als1", hys1:"sdu440/telemetry/hys1", als2:"sdu440/telemetry/als2", hys2:"sdu440/telemetry/hys2", cact:"sdu440/telemetry/cact", status:"sdu440/telemetry/status" },
-            c: { sv:"sdu440/command/sv", p:"sdu440/command/p", i:"sdu440/command/i", d:"sdu440/command/d", hys:"sdu440/command/hys", cp:"sdu440/command/cp", tim:"sdu440/command/tim", at:"sdu440/command/at", hys1:"sdu440/command/hys1", hys2:"sdu440/command/hys2", cact:"sdu440/command/cact", als1:"sdu440/command/als1", als2:"sdu440/command/als2", debug:"sdu440/command/debug" }
-        };
-
+        const alarmNames = ["Off","High","Std Hi","Low","Std Lo","Dev Hi","Dev Lo","Dev","Timer"];
+        const broker = "broker.hivemq.com"; 
+        const port = 8000;
+        const clientId = "WebClient-" + Math.floor(Math.random() * 10000);
         const client = new Paho.MQTT.Client(broker, port, clientId);
-        client.onConnectionLost = () => { document.getElementById("status").innerText = "เชื่อมต่อหลุด!"; document.getElementById("status").className = "status-tag"; };
-        
+
         let currentSV = 0;
+
+        client.onConnectionLost = () => { 
+            document.getElementById("status").innerText = "การเชื่อมต่อหลุด"; 
+            document.getElementById("status").className = "status-tag"; 
+        };
+        
         client.onMessageArrived = (m) => {
             const p = m.payloadString; const t = m.destinationName;
-            if(t===topics.t.status) { document.getElementById("status").innerText = (p==="false"?"Modbus ไม่ตอบสนอง":"ระบบออนไลน์"); document.getElementById("status").className = (p==="false"?"status-tag":"status-tag ok"); }
-            else if(t===topics.t.pv) { document.getElementById("v-pv").innerText = p; pushGraphData(parseInt(p)||0, currentSV); }
-            else if(t===topics.t.sv) { currentSV = parseInt(p)||0; document.getElementById("v-sv").innerText = p; document.getElementById("v-sv-tag").innerText = p; }
-            else if(t===topics.t.mv) document.getElementById("v-mv").innerText = p + " %";
-            else if(t===topics.t.p) document.getElementById("v-p").innerText = (parseFloat(p)/10.0).toFixed(1);
-            else if(t===topics.t.i) document.getElementById("v-i").innerText = p;
-            else if(t===topics.t.d) document.getElementById("v-d").innerText = p;
-            else if(t===topics.t.hys) document.getElementById("v-hys").innerText = p;
-            else if(t===topics.t.cp) document.getElementById("v-cp").innerText = p;
-            else if(t===topics.t.hys1) document.getElementById("v-hys1").innerText = p;
-            else if(t===topics.t.hys2) document.getElementById("v-hys2").innerText = p;
-            else if(t===topics.t.als1) document.getElementById("v-als1").innerText = alarmNames[parseInt(p)] || "Unknown";
-            else if(t===topics.t.als2) document.getElementById("v-als2").innerText = alarmNames[parseInt(p)] || "Unknown";
+            
+            if(t.includes("/status")) {
+                document.getElementById("status").innerText = (p==="false" ? "ตู้ Modbus ไม่ตอบสนอง" : "ออนไลน์");
+                document.getElementById("status").className = (p==="false" ? "status-tag" : "status-tag ok");
+            }
+            else if(t.includes("/pv")) { document.getElementById("v-pv").innerText = p; pushGraphData(parseInt(p)||0, currentSV); }
+            else if(t.includes("/sv")) { currentSV = parseInt(p)||0; document.getElementById("v-sv").innerText = p; document.getElementById("v-sv-tag").innerText = p; }
+            else if(t.includes("/mv")) { document.getElementById("v-mv").innerText = p + "%"; }
+            else if(t.includes("/p")) { document.getElementById("v-p").innerText = (parseFloat(p)/10.0).toFixed(1); }
+            else if(t.includes("/i")) { document.getElementById("v-i").innerText = p; }
+            else if(t.includes("/d")) { document.getElementById("v-d").innerText = p; }
+            else if(t.includes("/hys") && !t.includes("hys1") && !t.includes("hys2")) { document.getElementById("v-hys").innerText = p; }
+            else if(t.includes("/al1")) { document.getElementById("v-al1").innerText = p; }
+            else if(t.includes("/al2")) { document.getElementById("v-al2").innerText = p; }
+            else if(t.includes("/cp")) { document.getElementById("v-cp").innerText = p; }
+            else if(t.includes("/tim")) { document.getElementById("v-tim").innerText = p; }
+            else if(t.includes("/at")) { document.getElementById("v-at").innerText = p; }
+            else if(t.includes("/als1")) { document.getElementById("v-als1").innerText = alarmNames[parseInt(p)] || p; }
+            else if(t.includes("/als2")) { document.getElementById("v-als2").innerText = alarmNames[parseInt(p)] || p; }
+            else if(t.includes("/hys1")) { document.getElementById("v-hys1").innerText = p; }
+            else if(t.includes("/hys2")) { document.getElementById("v-hys2").innerText = p; }
+            else if(t.includes("/cact")) { document.getElementById("v-cact").innerText = p === "0" ? "Rev" : "Dir"; }
+            else if(t.includes("/inpt")) { document.getElementById("v-inpt").innerText = p; }
+            else if(t.includes("/unit")) { document.getElementById("v-unit").innerText = p === "0" ? "°C" : "°F"; }
+            else if(t.includes("/dp")) { document.getElementById("v-dp").innerText = p; }
+            else if(t.includes("/sch")) { document.getElementById("v-sch").innerText = p; }
         };
 
-        client.connect({ onSuccess: () => { document.getElementById("status").innerText = "ออนไลน์"; document.getElementById("status").className = "status-tag ok"; Object.values(topics.t).forEach(top => client.subscribe(top)); }, onFailure: () => { setTimeout(() => location.reload(), 3000); }, useSSL: true });
+        client.connect({ 
+            onSuccess: () => { 
+                document.getElementById("status").innerText = "ออนไลน์"; 
+                document.getElementById("status").className = "status-tag ok"; 
+                client.subscribe("sdu440/telemetry/#"); 
+            }, 
+            onFailure: () => { setTimeout(() => location.reload(), 3000); } 
+        });
 
         function send(param, inputId) {
-            const v = document.getElementById(inputId).value;
-            const m = new Paho.MQTT.Message(v); m.destinationName = topics.c[param]; client.send(m);
-            if(document.getElementById(inputId).tagName !== "SELECT") {
-                document.getElementById(inputId).value = "";
-            }
-        }
-
-        function sendDebug() {
-            const m = new Paho.MQTT.Message(`${document.getElementById("d-reg").value},${document.getElementById("d-val").value}`);
-            m.destinationName = topics.c.debug; client.send(m);
+            const el = document.getElementById(inputId);
+            if(el.value === "") return;
+            const m = new Paho.MQTT.Message(el.value); 
+            m.destinationName = "sdu440/command/" + param; 
+            client.send(m);
+            if(el.tagName !== "SELECT") el.value = "";
         }
 
         const chart = new Chart(document.getElementById('mqttChart').getContext('2d'), {
@@ -214,5 +178,3 @@
     </script>
 </body>
 </html>
-
-```
