@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDU440</title>
+    <title>SDU440 MQTT Enterprise Control v5</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Prompt:wght@300;500;700&display=swap" rel="stylesheet">
@@ -28,7 +28,12 @@
         .label span { display: block; font-size: 0.75rem; color: #6b7280; }
         .action { display: flex; align-items: center; gap: 8px; }
         .tag { font-family: 'JetBrains Mono', monospace; background: #1f2937; padding: 3px 8px; border-radius: 4px; font-size: 0.9rem; min-width: 45px; text-align: center; color: #9ca3af; }
-        input { background: #111827; border: 1px solid var(--border); color: #fff; padding: 6px; border-radius: 4px; width: 65px; text-align: center; font-family: 'JetBrains Mono', monospace; }
+        
+        /* เพิ่มสไตล์สำหรับ input และ select */
+        input, select { background: #111827; border: 1px solid var(--border); color: #fff; padding: 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
+        input { width: 65px; text-align: center; }
+        select { font-family: 'Prompt', sans-serif; font-size: 0.85rem; cursor: pointer; }
+        
         button { background: var(--accent); color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
         .tabs { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
         .tab-btn { background: none; border: 1px solid var(--border); color: #9ca3af; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 0.85rem; }
@@ -41,7 +46,7 @@
 <body>
     <div class="wrapper">
         <header>
-            <h1>SDU440</h1>
+            <h1>SDU440 MQTT Enterprise Control v5</h1>
             <div id="status" class="status-tag">กำลังเริ่มระบบการเชื่อมต่อ SSL...</div>
         </header>
 
@@ -80,13 +85,46 @@
                         <div class="action"><span class="tag" id="v-sv-tag">--</span><input type="number" id="i-sv"><button onclick="send('sv','i-sv')">SET</button></div>
                     </div>
                     
-                    <div class="row"><div class="label">โหมดโครงสร้างการเตือน 1 <span>(ALS1)</span></div><div class="action"><span class="tag" id="v-als1" style="min-width:120px; font-size:0.8rem;">--</span></div></div>
+                    <div class="row" style="border-left: 4px solid var(--danger);">
+                        <div class="label">โหมดโครงสร้างการเตือน 1 <span>(ALS1)</span></div>
+                        <div class="action">
+                            <span class="tag" id="v-als1" style="min-width:100px; font-size:0.8rem;">--</span>
+                            <select id="i-als1">
+                                <option value="0">Off (ปิด)</option>
+                                <option value="1">High (HI)</option>
+                                <option value="2">Standby Hi (SH)</option>
+                                <option value="3">Low (LO)</option>
+                                <option value="4">Standby Lo (SL)</option>
+                                <option value="5">Dev Hi (Hd)</option>
+                                <option value="6">Dev Lo (Ld)</option>
+                                <option value="7">Deviation (dE)</option>
+                            </select>
+                            <button onclick="send('als1','i-als1')">SET</button>
+                        </div>
+                    </div>
                     
                     <div class="row" style="border-left: 4px solid var(--warn);">
                         <div class="label">Alarm 2 Setpoint <span>(AL2)</span></div>
                         <div class="action"><span class="tag" id="v-al2">--</span><input type="number" id="i-al2"><button onclick="send('al2','i-al2')">SET</button></div>
                     </div>
-                    <div class="row"><div class="label">โหมดโครงสร้างการเตือน 2 <span>(ALS2)</span></div><div class="action"><span class="tag" id="v-als2" style="min-width:120px; font-size:0.8rem;">--</span></div></div>
+
+                    <div class="row" style="border-left: 4px solid var(--warn);">
+                        <div class="label">โหมดโครงสร้างการเตือน 2 <span>(ALS2)</span></div>
+                        <div class="action">
+                            <span class="tag" id="v-als2" style="min-width:100px; font-size:0.8rem;">--</span>
+                            <select id="i-als2">
+                                <option value="0">Off (ปิด)</option>
+                                <option value="1">High (HI)</option>
+                                <option value="2">Standby Hi (SH)</option>
+                                <option value="3">Low (LO)</option>
+                                <option value="4">Standby Lo (SL)</option>
+                                <option value="5">Dev Hi (Hd)</option>
+                                <option value="6">Dev Lo (Ld)</option>
+                                <option value="7">Deviation (dE)</option>
+                            </select>
+                            <button onclick="send('als2','i-als2')">SET</button>
+                        </div>
+                    </div>
                     
                     <div class="row">
                         <div class="label">ส่วนต่างรีเซ็ตสัญญาณเตือน 1 <span>(HyS1)</span></div>
@@ -132,7 +170,8 @@
         
         const topics = {
             t: { pv:"sdu440/telemetry/pv", sv:"sdu440/telemetry/sv", mv:"sdu440/telemetry/mv", p:"sdu440/telemetry/p", i:"sdu440/telemetry/i", d:"sdu440/telemetry/d", hys:"sdu440/telemetry/hys", al2:"sdu440/telemetry/al2", cp:"sdu440/telemetry/cp", tim:"sdu440/telemetry/tim", at:"sdu440/telemetry/at", inpt:"sdu440/telemetry/inpt", unit:"sdu440/telemetry/unit", dp:"sdu440/telemetry/dp", sch:"sdu440/telemetry/sch", scl:"sdu440/telemetry/scl", als1:"sdu440/telemetry/als1", hys1:"sdu440/telemetry/hys1", als2:"sdu440/telemetry/als2", hys2:"sdu440/telemetry/hys2", cact:"sdu440/telemetry/cact", status:"sdu440/telemetry/status" },
-            c: { sv:"sdu440/command/sv", p:"sdu440/command/p", i:"sdu440/command/i", d:"sdu440/command/d", hys:"sdu440/command/hys", al2:"sdu440/command/al2", cp:"sdu440/command/cp", tim:"sdu440/command/tim", at:"sdu440/command/at", hys1:"sdu440/command/hys1", hys2:"sdu440/command/hys2", cact:"sdu440/command/cact", debug:"sdu440/command/debug" }
+            // เพิ่ม als1 และ als2 ในหมวด command
+            c: { sv:"sdu440/command/sv", p:"sdu440/command/p", i:"sdu440/command/i", d:"sdu440/command/d", hys:"sdu440/command/hys", al2:"sdu440/command/al2", cp:"sdu440/command/cp", tim:"sdu440/command/tim", at:"sdu440/command/at", hys1:"sdu440/command/hys1", hys2:"sdu440/command/hys2", cact:"sdu440/command/cact", als1:"sdu440/command/als1", als2:"sdu440/command/als2", debug:"sdu440/command/debug" }
         };
 
         const client = new Paho.MQTT.Client(broker, port, clientId);
@@ -162,7 +201,10 @@
         function send(param, inputId) {
             const v = document.getElementById(inputId).value;
             const m = new Paho.MQTT.Message(v); m.destinationName = topics.c[param]; client.send(m);
-            document.getElementById(inputId).value = "";
+            // ยกเลิกการล้างค่าถ้าเป็น Dropdown เพื่อให้มันค้างค่าที่ผู้ใช้เลือกไว้จนกว่าข้อมูลจริงจากตู้จะวิ่งมาทับ
+            if(document.getElementById(inputId).tagName !== "SELECT") {
+                document.getElementById(inputId).value = "";
+            }
         }
 
         function sendDebug() {
