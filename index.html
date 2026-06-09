@@ -143,14 +143,8 @@
                         </div>
                     </div>
                     
-                    <div class="row">
-                        <div class="label">ส่วนต่างรีเซ็ตสัญญาณเตือน 1 <span>(HyS1)</span></div>
-                        <div class="action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button onclick="send('hys1','i-hys1')">SET</button></div>
-                    </div>
-                    <div class="row">
-                        <div class="label">ส่วนต่างรีเซ็ตสัญญาณเตือน 2 <span>(HyS2)</span></div>
-                        <div class="action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button onclick="send('hys2','i-hys2')">SET</button></div>
-                    </div>
+                    <div class="row"><div class="label">ส่วนต่างรีเซ็ตเตือน 1 <span>(HyS1)</span></div><div class="action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button onclick="send('hys1','i-hys1')">SET</button></div></div>
+                    <div class="row"><div class="label">ส่วนต่างรีเซ็ตเตือน 2 <span>(HyS2)</span></div><div class="action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button onclick="send('hys2','i-hys2')">SET</button></div></div>
                 </div>
 
                 <div id="t-tuning" class="tab-content">
@@ -198,6 +192,23 @@
         const inputNames = ["K-Type TC","J-Type TC","E-Type TC","N-Type TC","C-Type TC","T-Type TC","K-Type 0.1","R-Type TC","S-Type TC","B-Type TC","JIS Pt100","DIN Pt100","JIS Pt100 0.1","DIN Pt100 0.1","1-5V dc"];
         const alarmNames = ["Off","High -HI-","Standby Hi -SH-","Low -LO-","Standby Lo -SL-","Dev Hi -Hd-","Dev Lo -Ld-","Deviation -dE-","End Timer -tm-"];
 
+        // Setup Chart
+        const ctx = document.getElementById('mqttChart').getContext('2d');
+        const mqttChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ label: 'PV', data: [], borderColor: '#4ade80', tension: 0.1 }, { label: 'SV', data: [], borderColor: '#38bdf8', tension: 0.1 }] },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#1f2937' } }, x: { grid: { color: '#1f2937' } } } }
+        });
+
+        function pushGraphData(pv, sv) {
+            const now = new Date().toLocaleTimeString();
+            if(mqttChart.data.labels.length > 20) { mqttChart.data.labels.shift(); mqttChart.data.datasets[0].data.shift(); mqttChart.data.datasets[1].data.shift(); }
+            mqttChart.data.labels.push(now);
+            mqttChart.data.datasets[0].data.push(pv);
+            mqttChart.data.datasets[1].data.push(sv);
+            mqttChart.update();
+        }
+
         const broker = "broker.hivemq.com"; 
         const port = 8000;
         const clientId = "WebClientSDU440-" + Math.floor(Math.random() * 10000);
@@ -236,9 +247,32 @@
             else if(t===topics.t.scl) document.getElementById("v-scl").innerText = p;
         };
 
-        client.connect({ onSuccess: () => { document.getElementById("status").innerText = "ออนไลน์"; document.getElementById("status").className = "status-tag ok"; Object.values(topics.t).forEach(top => client.subscribe(top)); }, onFailure: () => { setTimeout(() => location.reload(), 3000); } });
+        client.connect({ onSuccess: () => { 
+            document.getElementById("status").innerText = "ออนไลน์"; 
+            document.getElementById("status").className = "status-tag ok"; 
+            Object.values(topics.t).forEach(top => client.subscribe(top)); 
+        }, onFailure: () => { 
+            setTimeout(() => location.reload(), 3000); 
+        }});
 
         function send(param, inputId) {
             const v = document.getElementById(inputId).value;
             if(v === "") return;
-            const m = new
+            const message = new Paho.MQTT.Message(v);
+            message.destinationName = topics.c[param];
+            client.send(message);
+            document.getElementById("debug-log").innerText = ">> Sent: " + topics.c[param] + " = " + v;
+        }
+
+        function sendDebug() {
+            const reg = document.getElementById("d-reg").value;
+            const val = document.getElementById("d-val").value;
+            if(reg === "" || val === "") return;
+            const message = new Paho.MQTT.Message(reg + "," + val);
+            message.destinationName = topics.c.debug;
+            client.send(message);
+            document.getElementById("debug-log").innerText = ">> Debug Command: " + reg + "," + val;
+        }
+    </script>
+</body>
+</html>
