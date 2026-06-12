@@ -251,7 +251,7 @@
         client.connect({ 
             useSSL: true,
             onSuccess: () => { 
-                document.getElementById("status").innerText = "ออนไลน์"; 
+                document.getElementById("status").innerText = "ออฟไลน์"; 
                 document.getElementById("status").className = "status-tag ok"; 
                 Object.values(topics.t).forEach(top => client.subscribe(top)); 
             }, 
