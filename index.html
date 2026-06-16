@@ -57,6 +57,18 @@
             <div style="display:flex; flex-direction:column; gap:20px;">
                 <div class="card">
                     <h2>📈 กราฟประวัติแนวโน้ม (Temperature Historical Chart)</h2>
+                    
+                    <div class="row" style="background: transparent; border: none; padding: 0 0 10px 0;">
+                        <div class="label" style="color: #9ca3af; font-size: 0.85rem;">ปรับสเกลแกน Y</div>
+                        <div class="action">
+                            <span style="font-size: 0.8rem; color: #9ca3af;">Min:</span>
+                            <input type="number" id="g-min" placeholder="Auto" style="width: 55px;">
+                            <span style="font-size: 0.8rem; color: #9ca3af; margin-left: 5px;">Max:</span>
+                            <input type="number" id="g-max" placeholder="Auto" style="width: 55px;">
+                            <button onclick="setGraphScale()">APPLY</button>
+                        </div>
+                    </div>
+
                     <div style="position: relative; width:100%; height:230px;"><canvas id="mqttChart"></canvas></div>
                 </div>
 
@@ -199,6 +211,21 @@
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#1f2937' } }, x: { grid: { color: '#1f2937' } } } }
         });
 
+        // ฟังก์ชันปรับสเกลกราฟ
+        function setGraphScale() {
+            const minVal = document.getElementById("g-min").value;
+            const maxVal = document.getElementById("g-max").value;
+
+            if (minVal !== "") mqttChart.options.scales.y.min = parseFloat(minVal);
+            else delete mqttChart.options.scales.y.min; // Auto scale
+
+            if (maxVal !== "") mqttChart.options.scales.y.max = parseFloat(maxVal);
+            else delete mqttChart.options.scales.y.max; // Auto scale
+
+            mqttChart.update();
+            document.getElementById("debug-log").innerText = `>> Graph Scale Updated: Min=${minVal || 'Auto'}, Max=${maxVal || 'Auto'}`;
+        }
+
         function pushGraphData(pv, sv) {
             const now = new Date().toLocaleTimeString();
             if(mqttChart.data.labels.length > 20) { mqttChart.data.labels.shift(); mqttChart.data.datasets[0].data.shift(); mqttChart.data.datasets[1].data.shift(); }
@@ -208,7 +235,6 @@
             mqttChart.update();
         }
 
-        // --- แก้ไขจุดนี้: ใช้ wss:// และพอร์ต 8884 สำหรับ HTTPS ---
         const broker = "broker.hivemq.com"; 
         const port = 8884; 
         const clientId = "WebClientSDU440-" + Math.floor(Math.random() * 10000);
@@ -247,17 +273,14 @@
             else if(t===topics.t.scl) document.getElementById("v-scl").innerText = p;
         };
 
-        // --- แก้ไขจุดนี้: ใส่ useSSL: true เพื่อเปิดใช้งาน WSS ---
         client.connect({ 
             useSSL: true,
             onSuccess: () => { 
-                document.getElementById("status").innerText = "ออฟไลน์"; 
+                document.getElementById("status").innerText = "ออนไลน์"; 
                 document.getElementById("status").className = "status-tag ok"; 
                 Object.values(topics.t).forEach(top => client.subscribe(top)); 
             }, 
-            onFailure: () => { 
-                setTimeout(() => location.reload(), 3000); 
-            }
+            onFailure: () => { setTimeout(() => location.reload(), 3000); }
         });
 
         function send(param, inputId) {
