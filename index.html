@@ -1,306 +1,448 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDU440 Control Center</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@500;700&family=Prompt:wght@300;500;700&display=swap" rel="stylesheet">
-    <style>
-        :root { --bg: #090d16; --card: #111827; --border: #1f2937; --text: #f3f4f6; --accent: #38bdf8; --success: #4ade80; --danger: #f87171; --warn: #fbbf24; }
-        body { font-family: 'Prompt', sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
-        .wrapper { width: 100%; max-width: 1200px; }
-        header { display: flex; justify-content: space-between; align-items: center; padding-bottom: 15px; border-bottom: 1px solid var(--border); margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-        h1 { margin: 0; font-size: 1.5rem; color: var(--accent); }
-        .status-tag { padding: 6px 14px; border-radius: 20px; font-weight: bold; font-size: 0.85rem; background: var(--danger); color: #000; }
-        .status-tag.ok { background: var(--success); }
-        .panel-3x { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-bottom: 20px; }
-        .monitor-card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 15px; text-align: center; }
-        .monitor-title { font-size: 0.85rem; color: #9ca3af; margin-bottom: 5px; }
-        .monitor-val { font-family: 'JetBrains Mono', monospace; font-size: 2.5rem; font-weight: 700; color: var(--success); }
-        .main-layout { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: 20px; }
-        @media(max-width: 968px) { .main-layout { grid-template-columns: 1fr; } .panel-3x { grid-template-columns: 1fr; } }
-        .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 20px; height: fit-content; }
-        .card h2 { font-size: 1.05rem; margin-top: 0; color: #cbd5e1; border-left: 4px solid var(--accent); padding-left: 8px; margin-bottom: 15px; }
-        .row { display: flex; align-items: center; justify-content: space-between; background: #090d16; padding: 10px 14px; border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border); }
-        .label { font-size: 0.9rem; color: #cbd5e1; }
-        .label span { display: block; font-size: 0.75rem; color: #6b7280; }
-        .action { display: flex; align-items: center; gap: 8px; }
-        .tag { font-family: 'JetBrains Mono', monospace; background: #1f2937; padding: 3px 8px; border-radius: 4px; font-size: 0.9rem; min-width: 45px; text-align: center; color: #9ca3af; }
-        input, select { background: #111827; border: 1px solid var(--border); color: #fff; padding: 6px; border-radius: 4px; font-family: 'JetBrains Mono', monospace; }
-        input { width: 65px; text-align: center; }
-        select { font-family: 'Prompt', sans-serif; font-size: 0.85rem; cursor: pointer; }
-        button { background: var(--accent); color: #000; border: none; padding: 6px 12px; border-radius: 4px; font-weight: bold; cursor: pointer; }
-        .tabs { display: flex; gap: 8px; margin-bottom: 15px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .tab-btn { background: none; border: 1px solid var(--border); color: #9ca3af; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-family: 'Prompt', sans-serif; font-size: 0.85rem; }
-        .tab-btn.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: bold; }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .console-box { background: #05070f; border: 1px solid var(--border); border-radius: 6px; padding: 10px; font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; height: 110px; overflow-y: auto; color: var(--success); margin-top: 10px; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDU440 Control Center</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── Design Tokens ─────────────────────────────────────── */
+:root {
+  --bg:        #07090f;
+  --surface:   #0e1320;
+  --card:      #111827;
+  --border:    #1e2a3a;
+  --border2:   #243044;
+  --text:      #e2e8f0;
+  --muted:     #64748b;
+  --accent:    #38bdf8;
+  --accent2:   #0ea5e9;
+  --green:     #34d399;
+  --yellow:    #fbbf24;
+  --red:       #f87171;
+  --mono:      'JetBrains Mono', monospace;
+  --sans:      'Sarabun', sans-serif;
+  --radius:    10px;
+  --radius-sm: 6px;
+}
+ 
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; padding: 0; }
+ 
+/* ── Login Gate ─────────────────────────────────────────── */
+#gate {
+  position: fixed; inset: 0;
+  background: radial-gradient(ellipse at 30% 20%, #0c1a2e 0%, #07090f 70%);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; transition: opacity .4s;
+}
+#gate.hidden { opacity: 0; pointer-events: none; }
+.gate-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 40px 36px; width: min(420px, 92vw); box-shadow: 0 24px 80px rgba(0,0,0,.6); }
+.gate-logo { font-family: var(--mono); font-size: 1.05rem; color: var(--accent); letter-spacing: .15em; margin-bottom: 6px; }
+.gate-title { font-size: 1.55rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.gate-sub { font-size: .85rem; color: var(--muted); margin-bottom: 28px; }
+.field-label { font-size: .8rem; color: var(--muted); margin-bottom: 6px; display: block; letter-spacing: .04em; }
+.gate-input { width: 100%; background: var(--card); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: .95rem; padding: 10px 14px; outline: none; transition: border-color .2s; margin-bottom: 14px; }
+.gate-input:focus { border-color: var(--accent); }
+.gate-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.btn-connect { width: 100%; background: var(--accent); color: #000; border: none; padding: 12px; border-radius: var(--radius-sm); font-family: var(--sans); font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 8px; letter-spacing: .04em; transition: background .2s, transform .1s; }
+.btn-connect:hover  { background: var(--accent2); }
+.btn-connect:active { transform: scale(.98); }
+.gate-hint { font-size: .75rem; color: var(--muted); margin-top: 14px; text-align: center; }
+.gate-err { font-size: .82rem; color: var(--red); margin-top: 10px; min-height: 20px; text-align: center; }
+ 
+/* ── Topbar ─────────────────────────────────────────────── */
+#app { display: none; flex-direction: column; min-height: 100vh; }
+#app.show { display: flex; }
+.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 58px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+.topbar-brand { font-family: var(--mono); font-size: .9rem; color: var(--accent); letter-spacing: .12em; display: flex; align-items: center; gap: 8px; }
+.topbar-brand::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: blink 2s ease-in-out infinite; }
+@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.badge-client { background: rgba(56,189,248,.12); border: 1px solid rgba(56,189,248,.3); color: var(--accent); font-family: var(--mono); font-size: .78rem; padding: 4px 10px; border-radius: 20px; letter-spacing: .05em; }
+.status-pill { padding: 5px 12px; border-radius: 20px; font-size: .78rem; font-weight: 700; background: rgba(248,113,113,.15); color: var(--red); border: 1px solid rgba(248,113,113,.3); transition: all .3s; }
+.status-pill.ok { background: rgba(52,211,153,.12); color: var(--green); border-color: rgba(52,211,153,.3); }
+.btn-logout { background: transparent; border: 1px solid var(--border2); color: var(--muted); padding: 5px 12px; border-radius: var(--radius-sm); font-family: var(--sans); font-size: .78rem; cursor: pointer; transition: all .2s; }
+.btn-logout:hover { border-color: var(--red); color: var(--red); }
+ 
+/* ── Layout & KPI ───────────────────────────────────────── */
+.main-wrap { flex: 1; max-width: 1280px; width: 100%; margin: 0 auto; padding: 22px 20px 40px; }
+.kpi-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
+.kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 14px; position: relative; overflow: hidden; }
+.kpi-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
+.kpi-card.pv::after  { background: linear-gradient(90deg, var(--green), transparent); }
+.kpi-card.sv::after  { background: linear-gradient(90deg, var(--accent), transparent); }
+.kpi-card.mv::after  { background: linear-gradient(90deg, var(--yellow), transparent); }
+.kpi-label { font-size: .75rem; color: var(--muted); letter-spacing: .07em; text-transform: uppercase; margin-bottom: 8px; }
+.kpi-val { font-family: var(--mono); font-size: 2.4rem; font-weight: 700; line-height: 1; }
+.kpi-card.pv .kpi-val  { color: var(--green); }
+.kpi-card.sv .kpi-val  { color: var(--accent); }
+.kpi-card.mv .kpi-val  { color: var(--yellow); }
+.kpi-unit { font-family: var(--mono); font-size: .8rem; color: var(--muted); margin-top: 4px; }
+ 
+/* ── Grid & Cards ───────────────────────────────────────── */
+.grid-main { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; align-items: start; }
+@media(max-width: 900px) { .kpi-strip { grid-template-columns: 1fr; } .grid-main { grid-template-columns: 1fr; } }
+.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+.card-title { font-size: .85rem; font-weight: 600; color: #94a3b8; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 7px; }
+.card-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; }
+ 
+/* ── Device Config Card ─────────────────────────────────── */
+.device-config { background: rgba(56,189,248,.04); border: 1px solid rgba(56,189,248,.2); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 18px; }
+.device-config-title { font-size: .78rem; color: var(--accent); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+.config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.config-item { display: flex; flex-direction: column; gap: 5px; }
+.config-label { font-size: .72rem; color: var(--muted); letter-spacing: .05em; }
+.config-row { display: flex; gap: 6px; }
+.config-input { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: .85rem; padding: 6px 10px; outline: none; flex: 1; transition: border-color .2s; }
+.config-input:focus { border-color: var(--accent); }
+.btn-config { background: rgba(56,189,248,.15); border: 1px solid rgba(56,189,248,.3); color: var(--accent); padding: 6px 12px; border-radius: var(--radius-sm); font-size: .78rem; font-weight: 700; cursor: pointer; font-family: var(--sans); white-space: nowrap; transition: all .2s; }
+.btn-config:hover { background: rgba(56,189,248,.25); }
+.ack-msg { font-size: .75rem; color: var(--green); margin-top: 8px; min-height: 16px; font-family: var(--mono); grid-column: 1/-1; }
+.ack-msg.err { color: var(--red); }
+ 
+/* ── Chart ──────────────────────────────────────────────── */
+.chart-wrap { position: relative; width: 100%; height: 210px; margin-top: 4px; }
+.chart-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+.chart-controls label { font-size: .75rem; color: var(--muted); }
+.chart-controls input { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: .8rem; padding: 5px 8px; width: 68px; outline: none; }
+.btn-sm { background: rgba(56,189,248,.12); border: 1px solid rgba(56,189,248,.25); color: var(--accent); padding: 5px 10px; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 700; cursor: pointer; font-family: var(--sans); }
+ 
+/* ── Param Rows ─────────────────────────────────────────── */
+.param-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; margin-bottom: 8px; }
+.param-row.alarm1 { border-left: 3px solid var(--red); }
+.param-row.alarm2 { border-left: 3px solid var(--yellow); }
+.p-label { font-size: .82rem; color: #cbd5e1; flex: 1; }
+.p-label small { display: block; font-size: .7rem; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
+.p-action { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.val-tag { font-family: var(--mono); background: rgba(255,255,255,.04); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; font-size: .82rem; color: var(--muted); min-width: 42px; text-align: center; }
+.p-input, .p-select { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); padding: 5px 7px; outline: none; font-size: .82rem; }
+.p-input { font-family: var(--mono); width: 62px; text-align: center; }
+.btn-set { background: var(--accent); color: #000; border: none; padding: 5px 11px; border-radius: var(--radius-sm); font-weight: 700; font-size: .78rem; cursor: pointer; font-family: var(--sans); }
+ 
+/* ── Tabs & Console ─────────────────────────────────────── */
+.tabs { display: flex; gap: 6px; margin-bottom: 14px; }
+.tab-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 7px 13px; border-radius: var(--radius-sm); cursor: pointer; font-family: var(--sans); font-size: .8rem; }
+.tab-btn.active { background: rgba(56,189,248,.14); border-color: var(--accent); color: var(--accent); font-weight: 700; }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+.console { background: #050709; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--mono); font-size: .76rem; height: 120px; overflow-y: auto; color: var(--green); margin-top: 10px; }
+.console .err-line { color: var(--red); }
+.console .info-line { color: var(--accent); }
+.left-col { display: flex; flex-direction: column; gap: 18px; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+</style>
 </head>
 <body>
-    <div class="wrapper">
-        <header>
-            <h1>SDU440 System Engine</h1>
-            <div id="status" class="status-tag">กำลังตรวจสอบการเชื่อมต่อ...</div>
-        </header>
-
-        <div class="panel-3x">
-            <div class="monitor-card"><div class="monitor-title">🔥 อุณหภูมิปัจจุบัน (PV)</div><div class="monitor-val" id="v-pv">--</div></div>
-            <div class="monitor-card"><div class="monitor-title">🎯 ค่าเป้าหมาย (SV)</div><div class="monitor-val" id="v-sv" style="color:var(--accent)">--</div></div>
-            <div class="monitor-card"><div class="monitor-title">⚡ กำลังเอาต์พุต (MV)</div><div class="monitor-val" id="v-mv" style="color:var(--warn)">--</div></div>
-        </div>
-
-        <div class="main-layout">
-            <div style="display:flex; flex-direction:column; gap:20px;">
-                <div class="card">
-                    <h2>📈 กราฟประวัติแนวโน้ม (Temperature Historical Chart)</h2>
-                    
-                    <div class="row" style="background: transparent; border: none; padding: 0 0 10px 0;">
-                        <div class="label" style="color: #9ca3af; font-size: 0.85rem;">ปรับสเกลแกน Y</div>
-                        <div class="action">
-                            <span style="font-size: 0.8rem; color: #9ca3af;">Min:</span>
-                            <input type="number" id="g-min" placeholder="Auto" style="width: 55px;">
-                            <span style="font-size: 0.8rem; color: #9ca3af; margin-left: 5px;">Max:</span>
-                            <input type="number" id="g-max" placeholder="Auto" style="width: 55px;">
-                            <button onclick="setGraphScale()">APPLY</button>
-                        </div>
-                    </div>
-
-                    <div style="position: relative; width:100%; height:230px;"><canvas id="mqttChart"></canvas></div>
-                </div>
-
-                <div class="card">
-                    <h2>⚙️ โครงสร้างฮาร์ดแวร์</h2>
-                    <div class="row">
-                        <div class="label">ชนิดเซ็นเซอร์อินพุต <span>(InPt)</span></div>
-                        <div class="action">
-                            <span class="tag" id="v-inpt">--</span>
-                            <select id="i-inpt">
-                                <option value="0">0: K-Type</option><option value="1">1: J-Type</option>
-                                <option value="2">2: E-Type</option><option value="3">3: N-Type</option>
-                                <option value="10">10: Pt100</option>
-                            </select>
-                            <button onclick="send('inpt','i-inpt')">SET</button>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="label">หน่วยวัดอุณหภูมิ <span>(UnIt)</span></div>
-                        <div class="action">
-                            <span class="tag" id="v-unit">--</span>
-                            <select id="i-unit"><option value="0">0: °C</option><option value="1">1: °F</option></select>
-                            <button onclick="send('unit','i-unit')">SET</button>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="label">ตำแหน่งจุดทศนิยม <span>(dP)</span></div>
-                        <div class="action">
-                            <span class="tag" id="v-dp">--</span>
-                            <select id="i-dp"><option value="0">0</option><option value="1">0.0</option><option value="2">0.00</option><option value="3">0.000</option></select>
-                            <button onclick="send('dp','i-dp')">SET</button>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="label">ขีดจำกัดสเกล</div>
-                        <div class="action">
-                            <span style="font-size: 0.8rem; color: #9ca3af;">Hi:</span><span class="tag" id="v-sch">--</span>
-                            <input type="number" id="i-sch" placeholder="Max" style="width: 50px;"><button onclick="send('sch','i-sch')">SET</button>
-                            <span style="font-size: 0.8rem; color: #9ca3af; margin-left: 5px;">Lo:</span><span class="tag" id="v-scl">--</span>
-                            <input type="number" id="i-scl" placeholder="Min" style="width: 50px;"><button onclick="send('scl','i-scl')">SET</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="card">
-                <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('t-basic')">🎛️ พารามิเตอร์ตู้</button>
-                    <button class="tab-btn" onclick="switchTab('t-tuning')">🛠️ ระบบ Tuning & PID</button>
-                    <button class="tab-btn" onclick="switchTab('t-debug')">💻 Debug Tool</button>
-                </div>
-
-                <div id="t-basic" class="tab-content active">
-                    <div class="row">
-                        <div class="label">ค่าเป้าหมาย <span>(SV)</span></div>
-                        <div class="action"><span class="tag" id="v-sv-tag">--</span><input type="number" id="i-sv"><button onclick="send('sv','i-sv')">SET</button></div>
-                    </div>
-                    
-                    <div class="row" style="border-left: 4px solid var(--danger);">
-                        <div class="label">โหมด AL 1 <span>(ALS1)</span></div>
-                        <div class="action">
-                            <span class="tag" id="v-als1" style="min-width:100px; font-size:0.8rem;">--</span>
-                            <select id="i-als1">
-                                <option value="0">Off (ปิด)</option><option value="1">High (HI)</option>
-                                <option value="2">Standby Hi (SH)</option><option value="3">Low (LO)</option>
-                                <option value="4">Standby Lo (SL)</option><option value="5">Dev Hi (Hd)</option>
-                                <option value="6">Dev Lo (Ld)</option><option value="7">Deviation (dE)</option>
-                            </select>
-                            <button onclick="send('als1','i-als1')">SET</button>
-                        </div>
-                    </div>
-
-                    <div class="row" style="border-left: 4px solid var(--warn);">
-                        <div class="label">โหมด AL 2 <span>(ALS2)</span></div>
-                        <div class="action">
-                            <span class="tag" id="v-als2" style="min-width:100px; font-size:0.8rem;">--</span>
-                            <select id="i-als2">
-                                <option value="0">Off (ปิด)</option><option value="1">High (HI)</option>
-                                <option value="2">Standby Hi (SH)</option><option value="3">Low (LO)</option>
-                                <option value="4">Standby Lo (SL)</option><option value="5">Dev Hi (Hd)</option>
-                                <option value="6">Dev Lo (Ld)</option><option value="7">Deviation (dE)</option>
-                            </select>
-                            <button onclick="send('als2','i-als2')">SET</button>
-                        </div>
-                    </div>
-                    
-                    <div class="row"><div class="label"> ค่า AL 1 <span>(HyS1)</span></div><div class="action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button onclick="send('hys1','i-hys1')">SET</button></div></div>
-                    <div class="row"><div class="label">ค่า AL 2 <span>(HyS2)</span></div><div class="action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button onclick="send('hys2','i-hys2')">SET</button></div></div>
-                </div>
-
-                <div id="t-tuning" class="tab-content">
-                    <div class="row"><div class="label">Proportional Band (P)</div><div class="action"><span class="tag" id="v-p">--</span><input type="number" id="i-p"><button onclick="send('p','i-p')">SET</button></div></div>
-                    <div class="row"><div class="label">Integral Time (I)</div><div class="action"><span class="tag" id="v-i">--</span><input type="number" id="i-i"><button onclick="send('i','i-i')">SET</button></div></div>
-                    <div class="row"><div class="label">Derivative Time (D)</div><div class="action"><span class="tag" id="v-d">--</span><input type="number" id="i-d"><button onclick="send('d','i-d')">SET</button></div></div>
-                    <div class="row"><div class="label">Control Hysteresis (HyS)</div><div class="action"><span class="tag" id="v-hys">--</span><input type="number" id="i-hys"><button onclick="send('hys','i-hys')">SET</button></div></div>
-                    <div class="row"><div class="label">Cycle Time (CP)</div><div class="action"><span class="tag" id="v-cp">--</span><input type="number" id="i-cp"><button onclick="send('cp','i-cp')">SET</button></div></div>
-                    <div class="row"><div class="label">Timer จับเวลา (tIm)</div><div class="action"><span class="tag" id="v-tim">--</span><input type="number" id="i-tim"><button onclick="send('tim','i-tim')">SET</button></div></div>
-                    <div class="row">
-                        <div class="label">Control Action <span>(CACt)</span></div>
-                        <div class="action">
-                            <span class="tag" id="v-cact">--</span>
-                            <select id="i-cact"><option value="0">Rev (ร้อน)</option><option value="1">Dir (เย็น)</option></select>
-                            <button onclick="send('cact','i-cact')">SET</button>
-                        </div>
-                    </div>
-                    <div class="row">
-                        <div class="label">Auto-Tuning <span>(AT)</span></div>
-                        <div class="action">
-                            <span class="tag" id="v-at">--</span>
-                            <select id="i-at"><option value="0">0: Stop</option><option value="1">1: Start</option></select>
-                            <button onclick="send('at','i-at')">SET</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div id="t-debug" class="tab-content">
-                    <p style="font-size:0.8rem; color:#9ca3af;">คำสั่งยิงตรง Register (Hex)</p>
-                    <div class="row"><div class="action">Reg:<input type="text" id="d-reg" value="001D" style="width:50px;"> Val:<input type="number" id="d-val" value="50" style="width:50px;"><button onclick="sendDebug()">SEND</button></div></div>
-                    <div class="console-box" id="debug-log">>> พร้อมใช้งาน</div>
-                </div>
-            </div>
-        </div>
+ 
+<div id="gate">
+  <div class="gate-box">
+    <div class="gate-logo">SDU440 · IoT CONTROLLER</div>
+    <div class="gate-title">เข้าสู่ระบบ</div>
+    <div class="gate-sub">กรอก Client ID ของบอร์ดที่ต้องการควบคุม</div>
+ 
+    <label class="field-label">CLIENT ID <span style="color:var(--red)">*</span></label>
+    <input class="gate-input" id="g-clientid" placeholder="เช่น client001 / factory02" autocomplete="off" spellcheck="false" value="client001">
+ 
+    <label class="field-label">MODBUS ADDRESS ปัจจุบัน (1–247)</label>
+    <div class="gate-row">
+      <input class="gate-input" id="g-addr" type="number" min="1" max="247" value="1" placeholder="1">
+      <input class="gate-input" id="g-broker" value="broker.hivemq.com" placeholder="MQTT Broker">
     </div>
-
-    <script>
-        function switchTab(id) {
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-            document.getElementById(id).classList.add('active');
-            event.currentTarget.classList.add('active');
-        }
-
-        const inputNames = ["K-Type TC","J-Type TC","E-Type TC","N-Type TC","C-Type TC","T-Type TC","K-Type 0.1","R-Type TC","S-Type TC","B-Type TC","JIS Pt100","DIN Pt100","JIS Pt100 0.1","DIN Pt100 0.1","1-5V dc"];
-        const alarmNames = ["Off","High -HI-","Standby Hi -SH-","Low -LO-","Standby Lo -SL-","Dev Hi -Hd-","Dev Lo -Ld-","Deviation -dE-","End Timer -tm-"];
-
-        const ctx = document.getElementById('mqttChart').getContext('2d');
-        const mqttChart = new Chart(ctx, {
-            type: 'line',
-            data: { labels: [], datasets: [{ label: 'PV', data: [], borderColor: '#4ade80', tension: 0.1 }, { label: 'SV', data: [], borderColor: '#38bdf8', tension: 0.1 }] },
-            options: { responsive: true, maintainAspectRatio: false, scales: { y: { grid: { color: '#1f2937' } }, x: { grid: { color: '#1f2937' } } } }
-        });
-
-        // ฟังก์ชันปรับสเกลกราฟ
-        function setGraphScale() {
-            const minVal = document.getElementById("g-min").value;
-            const maxVal = document.getElementById("g-max").value;
-
-            if (minVal !== "") mqttChart.options.scales.y.min = parseFloat(minVal);
-            else delete mqttChart.options.scales.y.min; // Auto scale
-
-            if (maxVal !== "") mqttChart.options.scales.y.max = parseFloat(maxVal);
-            else delete mqttChart.options.scales.y.max; // Auto scale
-
-            mqttChart.update();
-            document.getElementById("debug-log").innerText = `>> Graph Scale Updated: Min=${minVal || 'Auto'}, Max=${maxVal || 'Auto'}`;
-        }
-
-        function pushGraphData(pv, sv) {
-            const now = new Date().toLocaleTimeString();
-            if(mqttChart.data.labels.length > 20) { mqttChart.data.labels.shift(); mqttChart.data.datasets[0].data.shift(); mqttChart.data.datasets[1].data.shift(); }
-            mqttChart.data.labels.push(now);
-            mqttChart.data.datasets[0].data.push(pv);
-            mqttChart.data.datasets[1].data.push(sv);
-            mqttChart.update();
-        }
-
-        const broker = "broker.hivemq.com"; 
-        const port = 8884; 
-        const clientId = "WebClientSDU440-" + Math.floor(Math.random() * 10000);
-        
-        const topics = {
-            t: { pv:"sdu440/telemetry/pv", sv:"sdu440/telemetry/sv", mv:"sdu440/telemetry/mv", p:"sdu440/telemetry/p", i:"sdu440/telemetry/i", d:"sdu440/telemetry/d", hys:"sdu440/telemetry/hys", cp:"sdu440/telemetry/cp", tim:"sdu440/telemetry/tim", at:"sdu440/telemetry/at", inpt:"sdu440/telemetry/inpt", unit:"sdu440/telemetry/unit", dp:"sdu440/telemetry/dp", sch:"sdu440/telemetry/sch", scl:"sdu440/telemetry/scl", als1:"sdu440/telemetry/als1", hys1:"sdu440/telemetry/hys1", als2:"sdu440/telemetry/als2", hys2:"sdu440/telemetry/hys2", cact:"sdu440/telemetry/cact", status:"sdu440/telemetry/status" },
-            c: { sv:"sdu440/command/sv", p:"sdu440/command/p", i:"sdu440/command/i", d:"sdu440/command/d", hys:"sdu440/command/hys", cp:"sdu440/command/cp", tim:"sdu440/command/tim", at:"sdu440/command/at", hys1:"sdu440/command/hys1", hys2:"sdu440/command/hys2", cact:"sdu440/command/cact", als1:"sdu440/command/als1", als2:"sdu440/command/als2", inpt:"sdu440/command/inpt", unit:"sdu440/command/unit", dp:"sdu440/command/dp", sch:"sdu440/command/sch", scl:"sdu440/command/scl", debug:"sdu440/command/debug" }
-        };
-
-        const client = new Paho.MQTT.Client(broker, port, clientId);
-        client.onConnectionLost = () => { document.getElementById("status").innerText = "เชื่อมต่อหลุด!"; document.getElementById("status").className = "status-tag"; };
-        
-        let currentSV = 0;
-        client.onMessageArrived = (m) => {
-            const p = m.payloadString; const t = m.destinationName;
-            if(t===topics.t.status) { document.getElementById("status").innerText = (p==="false"?"Modbus ไม่ตอบสนอง":"ระบบออนไลน์"); document.getElementById("status").className = (p==="false"?"status-tag":"status-tag ok"); }
-            else if(t===topics.t.pv) { document.getElementById("v-pv").innerText = p; pushGraphData(parseInt(p)||0, currentSV); }
-            else if(t===topics.t.sv) { currentSV = parseInt(p)||0; document.getElementById("v-sv").innerText = p; document.getElementById("v-sv-tag").innerText = p; }
-            else if(t===topics.t.mv) document.getElementById("v-mv").innerText = p + " %";
-            else if(t===topics.t.p) document.getElementById("v-p").innerText = (parseFloat(p)/10.0).toFixed(1);
-            else if(t===topics.t.i) document.getElementById("v-i").innerText = p;
-            else if(t===topics.t.d) document.getElementById("v-d").innerText = p;
-            else if(t===topics.t.hys) document.getElementById("v-hys").innerText = p;
-            else if(t===topics.t.cp) document.getElementById("v-cp").innerText = p;
-            else if(t===topics.t.tim) document.getElementById("v-tim").innerText = p;
-            else if(t===topics.t.at) document.getElementById("v-at").innerText = p === "1" ? "Running" : "Stop";
-            else if(t===topics.t.hys1) document.getElementById("v-hys1").innerText = p;
-            else if(t===topics.t.hys2) document.getElementById("v-hys2").innerText = p;
-            else if(t===topics.t.als1) document.getElementById("v-als1").innerText = alarmNames[parseInt(p)] || p;
-            else if(t===topics.t.als2) document.getElementById("v-als2").innerText = alarmNames[parseInt(p)] || p;
-            else if(t===topics.t.cact) document.getElementById("v-cact").innerText = p === "0" ? "Rev" : "Dir";
-            else if(t===topics.t.inpt) document.getElementById("v-inpt").innerText = inputNames[parseInt(p)] || p;
-            else if(t===topics.t.unit) document.getElementById("v-unit").innerText = p === "0" ? "°C" : "°F";
-            else if(t===topics.t.dp) document.getElementById("v-dp").innerText = p;
-            else if(t===topics.t.sch) document.getElementById("v-sch").innerText = p;
-            else if(t===topics.t.scl) document.getElementById("v-scl").innerText = p;
-        };
-
-        client.connect({ 
-            useSSL: true,
-            onSuccess: () => { 
-                document.getElementById("status").innerText = "กำลังอ่านค่า...."; 
-                document.getElementById("status").className = "status-tag ok"; 
-                Object.values(topics.t).forEach(top => client.subscribe(top)); 
-            }, 
-            onFailure: () => { setTimeout(() => location.reload(), 3000); }
-        });
-
-        function send(param, inputId) {
-            const v = document.getElementById(inputId).value;
-            if(v === "") return;
-            const message = new Paho.MQTT.Message(v);
-            message.destinationName = topics.c[param];
-            client.send(message);
-            document.getElementById("debug-log").innerText = ">> Sent: " + topics.c[param] + " = " + v;
-        }
-
-        function sendDebug() {
-            const reg = document.getElementById("d-reg").value;
-            const val = document.getElementById("d-val").value;
-            if(reg === "" || val === "") return;
-            const message = new Paho.MQTT.Message(reg + "," + val);
-            message.destinationName = topics.c.debug;
-            client.send(message);
-            document.getElementById("debug-log").innerText = ">> Debug Command: " + reg + "," + val;
-        }
-    </script>
+ 
+    <button class="btn-connect" onclick="doConnect()">เชื่อมต่อระบบ</button>
+    <div class="gate-err" id="gate-err"></div>
+    <div class="gate-hint">Client ID คือตัวแยกข้อมูลไม่ให้แต่ละบอร์ดทับซ้อนกัน</div>
+  </div>
+</div>
+ 
+<div id="app">
+  <nav class="topbar">
+    <div class="topbar-brand">SDU440 CONTROL</div>
+    <div class="topbar-right">
+      <span class="badge-client" id="tb-client">—</span>
+      <span class="status-pill" id="tb-status">ออฟไลน์</span>
+      <button class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
+  </nav>
+ 
+  <div class="main-wrap">
+ 
+    <div class="device-config">
+      <div class="device-config-title">⚙️ ตั้งค่าอุปกรณ์ (Live Config)</div>
+      <div class="config-grid">
+        <div class="config-item">
+          <span class="config-label">เปลี่ยน MODBUS ADDRESS</span>
+          <div class="config-row">
+            <input class="config-input" id="cfg-cur-addr" type="number" readonly style="background:rgba(0,0,0,.3); color:var(--muted);">
+            <span style="color:var(--muted); font-size:.8rem; align-self:center;">→</span>
+            <input class="config-input" id="cfg-new-addr" type="number" min="1" max="247" placeholder="Address ใหม่">
+            <button class="btn-config" onclick="sendSetAddress()">HOT SWAP</button>
+          </div>
+        </div>
+        <div class="config-item">
+          <span class="config-label">เปลี่ยน CLIENT ID ในบอร์ด</span>
+          <div class="config-row">
+            <input class="config-input" id="cfg-new-cid" placeholder="New Client ID">
+            <button class="btn-config" onclick="sendSetClientId()">APPLY</button>
+          </div>
+        </div>
+        <div class="ack-msg" id="ack-msg"></div>
+      </div>
+    </div>
+ 
+    <div class="kpi-strip">
+      <div class="kpi-card pv"><div class="kpi-label">🔥 อุณหภูมิปัจจุบัน</div><div class="kpi-val" id="v-pv">--</div><div class="kpi-unit">Process Value (PV)</div></div>
+      <div class="kpi-card sv"><div class="kpi-label">🎯 ค่าเป้าหมาย</div><div class="kpi-val" id="v-sv">--</div><div class="kpi-unit">Set Value (SV)</div></div>
+      <div class="kpi-card mv"><div class="kpi-label">⚡ กำลังเอาต์พุต</div><div class="kpi-val" id="v-mv">--</div><div class="kpi-unit">Manipulated Value % (MV)</div></div>
+    </div>
+ 
+    <div class="grid-main">
+      <div class="left-col">
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>กราฟแนวโน้มอุณหภูมิ</div>
+          <div class="chart-controls">
+            <label>Min Y:</label><input type="number" id="g-min" placeholder="Auto">
+            <label>Max Y:</label><input type="number" id="g-max" placeholder="Auto">
+            <button class="btn-sm" onclick="setGraphScale()">APPLY</button>
+          </div>
+          <div class="chart-wrap"><canvas id="mqttChart"></canvas></div>
+        </div>
+ 
+        <div class="card">
+          <div class="card-title"><span class="dot"></span>โครงสร้างฮาร์ดแวร์</div>
+          <div class="param-row"><div class="p-label">ชนิดเซ็นเซอร์อินพุต <small>InPt</small></div><div class="p-action"><span class="val-tag" id="v-inpt">--</span><select class="p-select" id="i-inpt"><option value="0">0: K-Type</option><option value="1">1: J-Type</option><option value="2">2: E-Type</option><option value="3">3: N-Type</option><option value="10">10: Pt100</option></select><button class="btn-set" onclick="send('inpt','i-inpt')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">หน่วยวัดอุณหภูมิ <small>UnIt</small></div><div class="p-action"><span class="val-tag" id="v-unit">--</span><select class="p-select" id="i-unit"><option value="0">°C</option><option value="1">°F</option></select><button class="btn-set" onclick="send('unit','i-unit')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">ตำแหน่งทศนิยม <small>dP</small></div><div class="p-action"><span class="val-tag" id="v-dp">--</span><select class="p-select" id="i-dp"><option value="0">0</option><option value="1">0.0</option><option value="2">0.00</option><option value="3">0.000</option></select><button class="btn-set" onclick="send('dp','i-dp')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">ขีดจำกัดสเกล Hi / Lo <small>SCH / SCL</small></div><div class="p-action"><span style="font-size:.72rem; color:var(--muted)">Hi:</span><span class="val-tag" id="v-sch">--</span><input class="p-input" type="number" id="i-sch" placeholder="Hi" style="width:50px"><button class="btn-set" onclick="send('sch','i-sch')">SET</button><span style="font-size:.72rem; color:var(--muted); margin-left:4px">Lo:</span><span class="val-tag" id="v-scl">--</span><input class="p-input" type="number" id="i-scl" placeholder="Lo" style="width:50px"><button class="btn-set" onclick="send('scl','i-scl')">SET</button></div></div>
+        </div>
+      </div>
+ 
+      <div class="card">
+        <div class="tabs">
+          <button class="tab-btn active" onclick="switchTab('t-basic', this)">🎛️ พารามิเตอร์</button>
+          <button class="tab-btn" onclick="switchTab('t-pid', this)">🛠️ PID Tuning</button>
+          <button class="tab-btn" onclick="switchTab('t-debug', this)">💻 Debug</button>
+        </div>
+ 
+        <div id="t-basic" class="tab-pane active">
+          <div class="param-row"><div class="p-label">ค่าเป้าหมาย <small>SV</small></div><div class="p-action"><span class="val-tag" id="v-sv-tag">--</span><input class="p-input" type="number" id="i-sv"><button class="btn-set" onclick="send('sv','i-sv')">SET</button></div></div>
+          <div class="param-row alarm1"><div class="p-label">โหมด Alarm 1 <small>ALS1</small></div><div class="p-action"><span class="val-tag" id="v-als1" style="min-width:80px; font-size:.72rem">--</span><select class="p-select" id="i-als1"><option value="0">Off</option><option value="1">High HI</option><option value="2">Standby Hi SH</option><option value="3">Low LO</option><option value="4">Standby Lo SL</option><option value="5">Dev Hi Hd</option><option value="6">Dev Lo Ld</option><option value="7">Deviation dE</option></select><button class="btn-set" onclick="send('als1','i-als1')">SET</button></div></div>
+          <div class="param-row alarm2"><div class="p-label">โหมด Alarm 2 <small>ALS2</small></div><div class="p-action"><span class="val-tag" id="v-als2" style="min-width:80px; font-size:.72rem">--</span><select class="p-select" id="i-als2"><option value="0">Off</option><option value="1">High HI</option><option value="2">Standby Hi SH</option><option value="3">Low LO</option><option value="4">Standby Lo SL</option><option value="5">Dev Hi Hd</option><option value="6">Dev Lo Ld</option><option value="7">Deviation dE</option></select><button class="btn-set" onclick="send('als2','i-als2')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">ค่า Alarm 1 <small>HyS1</small></div><div class="p-action"><span class="val-tag" id="v-hys1">--</span><input class="p-input" type="number" id="i-hys1"><button class="btn-set" onclick="send('hys1','i-hys1')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">ค่า Alarm 2 <small>HyS2</small></div><div class="p-action"><span class="val-tag" id="v-hys2">--</span><input class="p-input" type="number" id="i-hys2"><button class="btn-set" onclick="send('hys2','i-hys2')">SET</button></div></div>
+        </div>
+ 
+        <div id="t-pid" class="tab-pane">
+          <div class="param-row"><div class="p-label">Proportional Band <small>P</small></div><div class="p-action"><span class="val-tag" id="v-p">--</span><input class="p-input" type="number" id="i-p"><button class="btn-set" onclick="send('p','i-p')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">Integral Time <small>I</small></div><div class="p-action"><span class="val-tag" id="v-i">--</span><input class="p-input" type="number" id="i-i"><button class="btn-set" onclick="send('i','i-i')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">Derivative Time <small>D</small></div><div class="p-action"><span class="val-tag" id="v-d">--</span><input class="p-input" type="number" id="i-d"><button class="btn-set" onclick="send('d','i-d')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">Control Hysteresis <small>HyS</small></div><div class="p-action"><span class="val-tag" id="v-hys">--</span><input class="p-input" type="number" id="i-hys"><button class="btn-set" onclick="send('hys','i-hys')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">Cycle Time <small>CP</small></div><div class="p-action"><span class="val-tag" id="v-cp">--</span><input class="p-input" type="number" id="i-cp"><button class="btn-set" onclick="send('cp','i-cp')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">Timer <small>tIm</small></div><div class="p-action"><span class="val-tag" id="v-tim">--</span><input class="p-input" type="number" id="i-tim"><button class="btn-set" onclick="send('tim','i-tim')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">Control Action <small>CACt</small></div><div class="p-action"><span class="val-tag" id="v-cact">--</span><select class="p-select" id="i-cact"><option value="0">Rev (ร้อน)</option><option value="1">Dir (เย็น)</option></select><button class="btn-set" onclick="send('cact','i-cact')">SET</button></div></div>
+          <div class="param-row"><div class="p-label">Auto-Tuning <small>AT</small></div><div class="p-action"><span class="val-tag" id="v-at">--</span><select class="p-select" id="i-at"><option value="0">0: Stop</option><option value="1">1: Start</option></select><button class="btn-set" onclick="send('at','i-at')">SET</button></div></div>
+        </div>
+ 
+        <div id="t-debug" class="tab-pane">
+          <p style="font-size:.78rem; color:var(--muted); margin-bottom:10px">ยิงคำสั่งตรง Register (Hex Address)</p>
+          <div class="param-row">
+            <div class="p-action" style="gap:8px; width:100%">
+              <span style="font-size:.78rem; color:var(--muted)">Reg:</span><input class="p-input" id="d-reg" value="001D" style="width:60px">
+              <span style="font-size:.78rem; color:var(--muted)">Val:</span><input class="p-input" id="d-val" type="number" value="50" style="width:60px">
+              <button class="btn-set" onclick="sendDebug()">SEND</button>
+            </div>
+          </div>
+          <div class="console" id="debug-log"><span class="info-line">>> Console พร้อมใช้งาน</span></div>
+        </div>
+ 
+      </div>
+    </div>
+  </div>
+</div>
+ 
+<script>
+let CLIENT_ID = '';
+let modbusAddr = 1;
+let mqttBroker = 'broker.hivemq.com';
+let mqttClient = null;
+let currentSV = 0;
+ 
+// สร้าง Topic แบบเจาะจง ClientID
+const T = (sub) => `sdu440/${CLIENT_ID}/telemetry/${sub}`;
+const C = (sub) => `sdu440/${CLIENT_ID}/command/${sub}`;
+const R = (sub) => `sdu440/${CLIENT_ID}/response/${sub}`;
+ 
+const alarmNames = ["Off","HI","SH","LO","SL","Hd","Ld","dE","tm"];
+const inputNames = ["K-Type","J-Type","E-Type","N-Type","C-Type","T-Type","K(0.1)","R-Type","S-Type","B-Type","JIS Pt100","DIN Pt100","Pt100(0.1)","Pt100(0.1)","1-5V"];
+ 
+// ── Chart ──
+const ctx = document.getElementById('mqttChart').getContext('2d');
+const chart = new Chart(ctx, {
+  type: 'line',
+  data: { labels: [], datasets: [
+      { label: 'PV', data: [], borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.06)', tension: .3, pointRadius: 2 },
+      { label: 'SV', data: [], borderColor: '#38bdf8', backgroundColor: 'transparent', tension: .3, pointRadius: 2, borderDash: [4,3] }
+  ]},
+  options: { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 11 } } } }, scales: { x: { grid: { color: '#1e2a3a' }, ticks: { color: '#64748b', font: { size: 10 } } }, y: { grid: { color: '#1e2a3a' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
+});
+ 
+function pushChart(pv, sv) {
+  const t = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  if (chart.data.labels.length > 25) { chart.data.labels.shift(); chart.data.datasets.forEach(d => d.data.shift()); }
+  chart.data.labels.push(t); chart.data.datasets[0].data.push(pv); chart.data.datasets[1].data.push(sv); chart.update();
+}
+function setGraphScale() {
+  const mn = document.getElementById('g-min').value, mx = document.getElementById('g-max').value;
+  if (mn !== '') chart.options.scales.y.min = parseFloat(mn); else delete chart.options.scales.y.min;
+  if (mx !== '') chart.options.scales.y.max = parseFloat(mx); else delete chart.options.scales.y.max;
+  chart.update(); log(`Graph scale: Y[${mn||'Auto'} – ${mx||'Auto'}]`);
+}
+ 
+function log(msg, type = '') {
+  const el = document.getElementById('debug-log'), line = document.createElement('div');
+  line.className = type ? `${type}-line` : ''; line.textContent = `>> ${msg}`;
+  el.appendChild(line); el.scrollTop = el.scrollHeight;
+  if (el.children.length > 80) el.removeChild(el.firstChild);
+}
+ 
+// ── Connect / Flow ──
+function doConnect() {
+  const cid = document.getElementById('g-clientid').value.trim();
+  const addr = parseInt(document.getElementById('g-addr').value) || 1;
+  const broker = document.getElementById('g-broker').value.trim() || 'broker.hivemq.com';
+ 
+  if (!cid) { document.getElementById('gate-err').textContent = '⚠️ กรุณากรอก Client ID'; return; }
+  CLIENT_ID = cid; modbusAddr = addr; mqttBroker = broker;
+  document.getElementById('gate-err').textContent = 'กำลังเชื่อมต่อ...';
+  connectMQTT();
+}
+ 
+function doLogout() {
+  if (mqttClient) try { mqttClient.disconnect(); } catch(e) {}
+  document.getElementById('app').classList.remove('show');
+  document.getElementById('gate').classList.remove('hidden');
+  document.getElementById('gate-err').textContent = '';
+  document.getElementById('tb-status').textContent = 'ออฟไลน์';
+  document.getElementById('tb-status').classList.remove('ok');
+}
+ 
+function connectMQTT() {
+  const cidStr = 'WebSDU440-' + Math.random().toString(16).slice(2, 7);
+  // พอร์ต 8884 (WSS) สำหรับใช้งานบน GitHub Pages (HTTPS)
+  mqttClient = new Paho.MQTT.Client(mqttBroker, 8884, cidStr); 
+ 
+  mqttClient.onConnectionLost = (r) => {
+    setStatus(false, 'เชื่อมต่อหลุด — ' + r.errorMessage);
+    log('Connection lost: ' + r.errorMessage, 'err');
+    setTimeout(connectMQTT, 5000);
+  };
+  mqttClient.onMessageArrived = onMessage;
+  mqttClient.connect({
+    useSSL: true, // สำคัญเมื่อรันบน HTTPS
+    timeout: 8,
+    onSuccess: onConnected,
+    onFailure: (e) => {
+      document.getElementById('gate-err').textContent = '❌ เชื่อมต่อไม่สำเร็จ: ' + e.errorMessage;
+    }
+  });
+}
+ 
+function onConnected() {
+  document.getElementById('gate').classList.add('hidden'); document.getElementById('app').classList.add('show');
+  document.getElementById('tb-client').textContent = 'Client: ' + CLIENT_ID;
+  document.getElementById('cfg-cur-addr').value = modbusAddr;
+ 
+  const subs = ['status','pv','sv','mv','p','i','d','hys','cp','tim','at','inpt','unit','dp','sch','scl','als1','hys1','als2','hys2','cact','board_info'];
+  subs.forEach(s => mqttClient.subscribe(T(s)));
+  mqttClient.subscribe(R('set_address')); mqttClient.subscribe(R('set_clientid'));
+ 
+  setStatus(false, 'รอข้อมูลจากบอร์ด...');
+  log(`Connected | Client="${CLIENT_ID}" Addr=${modbusAddr}`, 'info');
+}
+ 
+function onMessage(msg) {
+  const p = msg.payloadString, t = msg.destinationName;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+ 
+  if (t === T('status')) { const ok = p === 'true'; setStatus(ok, ok ? `ระบบออนไลน์ · Addr ${modbusAddr}` : 'Modbus ไม่ตอบสนอง'); }
+  else if (t === T('pv'))   { set('v-pv', p); pushChart(parseInt(p)||0, currentSV); }
+  else if (t === T('sv'))   { currentSV = parseInt(p)||0; set('v-sv', p); set('v-sv-tag', p); }
+  else if (t === T('mv'))   { set('v-mv', p + '%'); }
+  else if (t === T('p'))    { set('v-p',  (parseFloat(p)/10).toFixed(1)); }
+  else if (t === T('i'))    { set('v-i',  p); }
+  else if (t === T('d'))    { set('v-d',  p); }
+  else if (t === T('hys'))  { set('v-hys', p); }
+  else if (t === T('cp'))   { set('v-cp',  p); }
+  else if (t === T('tim'))  { set('v-tim', p); }
+  else if (t === T('at'))   { set('v-at',  p); }
+  else if (t === T('inpt')) { set('v-inpt', inputNames[parseInt(p)] || p); }
+  else if (t === T('unit')) { set('v-unit', parseInt(p)===0 ? '°C' : '°F'); }
+  else if (t === T('dp'))   { set('v-dp',  p); }
+  else if (t === T('sch'))  { set('v-sch', p); }
+  else if (t === T('scl'))  { set('v-scl', p); }
+  else if (t === T('als1')) { set('v-als1', alarmNames[parseInt(p)] || p); }
+  else if (t === T('hys1')) { set('v-hys1', p); }
+  else if (t === T('als2')) { set('v-als2', alarmNames[parseInt(p)] || p); }
+  else if (t === T('hys2')) { set('v-hys2', p); }
+  else if (t === T('cact')) { set('v-cact', parseInt(p)===0?'Rev':'Dir'); }
+  else if (t === T('board_info')) {
+    try {
+      const info = JSON.parse(p);
+      if (info.address) { modbusAddr = info.address; document.getElementById('cfg-cur-addr').value = modbusAddr; log(`Board info: addr=${info.address}`, 'info'); }
+    } catch(e) {}
+  }
+  else if (t === R('set_address')) {
+    try {
+      const r = JSON.parse(p); const ack = document.getElementById('ack-msg');
+      if (r.success) { modbusAddr = r.address; document.getElementById('cfg-cur-addr').value = modbusAddr; ack.className = 'ack-msg'; ack.textContent = `✅ เปลี่ยน Address เป็น ${r.address} สำเร็จ (Hot Swap)`; log(`ACK set_address: OK → ${r.address}`, 'info'); } 
+      else { ack.className = 'ack-msg err'; ack.textContent = `❌ เปลี่ยน Address ไม่สำเร็จ: ${r.info || ''}`; log('ACK set_address: FAILED', 'err'); }
+      setTimeout(() => { ack.textContent = ''; }, 5000);
+    } catch(e) {}
+  }
+}
+ 
+function setStatus(ok, label) {
+  const el = document.getElementById('tb-status'); el.textContent = label; el.className = ok ? 'status-pill ok' : 'status-pill';
+}
+ 
+function send(cmd, inputId) {
+  const val = document.getElementById(inputId)?.value;
+  if (!val && val !== '0') return;
+  const msg = new Paho.MQTT.Message(String(val)); msg.destinationName = C(cmd); mqttClient.send(msg); log(`CMD ${cmd} = ${val}`);
+}
+function sendDebug() {
+  const reg = document.getElementById('d-reg').value, val = document.getElementById('d-val').value;
+  const msg = new Paho.MQTT.Message(reg + ',' + val); msg.destinationName = C('debug'); mqttClient.send(msg); log(`DEBUG Reg=0x${reg} Val=${val}`);
+}
+function sendSetAddress() {
+  const newAddr = parseInt(document.getElementById('cfg-new-addr').value);
+  if (!newAddr || newAddr < 1 || newAddr > 247) { showAck('⚠️ กรอก Address ใหม่ให้ถูกต้อง (1–247)', true); return; }
+  const payload = JSON.stringify({ cmd: 'SET_ADDRESS', target_address: modbusAddr, new_address: newAddr, persist: true, timestamp: Math.floor(Date.now() / 1000) });
+  const msg = new Paho.MQTT.Message(payload); msg.destinationName = C('set_address'); mqttClient.send(msg);
+  log(`SET_ADDRESS: ${modbusAddr} → ${newAddr} (waiting ACK...)`,'info'); showAck('⏳ รอการยืนยันจากบอร์ด...', false);
+}
+function sendSetClientId() {
+  const newId = document.getElementById('cfg-new-cid').value.trim();
+  if (!newId || newId.length > 32) { showAck('⚠️ Client ID ต้องมี 1–32 ตัวอักษร', true); return; }
+  const payload = JSON.stringify({ cmd: 'SET_CLIENTID', new_id: newId });
+  const msg = new Paho.MQTT.Message(payload); msg.destinationName = C('set_clientid'); mqttClient.send(msg);
+  log(`SET_CLIENTID → "${newId}" (บอร์ดจะ reconnect อัตโนมัติ)`, 'info'); showAck(`⏳ บอร์ดกำลังเปลี่ยนเป็น "${newId}"...`, false);
+}
+function showAck(msg, isErr) {
+  const el = document.getElementById('ack-msg'); el.className = isErr ? 'ack-msg err' : 'ack-msg'; el.textContent = msg;
+  if (!isErr) return; setTimeout(() => { el.textContent = ''; }, 4000);
+}
+function switchTab(id, btn) {
+  document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+  document.getElementById(id).classList.add('active'); btn.classList.add('active');
+}
+</script>
 </body>
 </html>
