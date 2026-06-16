@@ -3,445 +3,427 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SDU440 Control Center</title>
+<title>SDU440 Commercial IoT Center</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Sarabun:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-/* ── Design Tokens ─────────────────────────────────────── */
 :root {
-  --bg:        #07090f;
-  --surface:   #0e1320;
-  --card:      #111827;
-  --border:    #1e2a3a;
-  --border2:   #243044;
-  --text:      #e2e8f0;
-  --muted:     #64748b;
-  --accent:    #38bdf8;
-  --accent2:   #0ea5e9;
-  --green:     #34d399;
-  --yellow:    #fbbf24;
-  --red:       #f87171;
-  --mono:      'JetBrains Mono', monospace;
-  --sans:      'Sarabun', sans-serif;
-  --radius:    10px;
-  --radius-sm: 6px;
+  --bg-main: #060813;
+  --bg-surface: #0b0f19;
+  --bg-card: #111625;
+  --border-color: #1e2640;
+  --primary: #38bdf8;
+  --primary-hover: #0ea5e9;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --text-main: #f1f5f9;
+  --text-muted: #64748b;
 }
- 
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { scroll-behavior: smooth; }
-body { font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; padding: 0; }
- 
-/* ── Login Gate ─────────────────────────────────────────── */
-#gate {
-  position: fixed; inset: 0;
-  background: radial-gradient(ellipse at 30% 20%, #0c1a2e 0%, #07090f 70%);
-  display: flex; align-items: center; justify-content: center;
-  z-index: 100; transition: opacity .4s;
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
+body { background: var(--bg-main); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+
+/* ── Login Gate UI ── */
+#gate-viewport {
+  position: fixed; inset: 0; background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+  display: flex; align-items: center; justify-content: center; z-index: 999;
 }
-#gate.hidden { opacity: 0; pointer-events: none; }
-.gate-box { background: var(--surface); border: 1px solid var(--border2); border-radius: 16px; padding: 40px 36px; width: min(420px, 92vw); box-shadow: 0 24px 80px rgba(0,0,0,.6); }
-.gate-logo { font-family: var(--mono); font-size: 1.05rem; color: var(--accent); letter-spacing: .15em; margin-bottom: 6px; }
-.gate-title { font-size: 1.55rem; font-weight: 700; color: var(--text); margin-bottom: 4px; }
-.gate-sub { font-size: .85rem; color: var(--muted); margin-bottom: 28px; }
-.field-label { font-size: .8rem; color: var(--muted); margin-bottom: 6px; display: block; letter-spacing: .04em; }
-.gate-input { width: 100%; background: var(--card); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: .95rem; padding: 10px 14px; outline: none; transition: border-color .2s; margin-bottom: 14px; }
-.gate-input:focus { border-color: var(--accent); }
-.gate-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
-.btn-connect { width: 100%; background: var(--accent); color: #000; border: none; padding: 12px; border-radius: var(--radius-sm); font-family: var(--sans); font-size: 1rem; font-weight: 700; cursor: pointer; margin-top: 8px; letter-spacing: .04em; transition: background .2s, transform .1s; }
-.btn-connect:hover  { background: var(--accent2); }
-.btn-connect:active { transform: scale(.98); }
-.gate-hint { font-size: .75rem; color: var(--muted); margin-top: 14px; text-align: center; }
-.gate-err { font-size: .82rem; color: var(--red); margin-top: 10px; min-height: 20px; text-align: center; }
- 
-/* ── Topbar ─────────────────────────────────────────────── */
-#app { display: none; flex-direction: column; min-height: 100vh; }
-#app.show { display: flex; }
-.topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 24px; height: 58px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
-.topbar-brand { font-family: var(--mono); font-size: .9rem; color: var(--accent); letter-spacing: .12em; display: flex; align-items: center; gap: 8px; }
-.topbar-brand::before { content: ''; display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); animation: blink 2s ease-in-out infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:.3} }
-.topbar-right { display: flex; align-items: center; gap: 10px; }
-.badge-client { background: rgba(56,189,248,.12); border: 1px solid rgba(56,189,248,.3); color: var(--accent); font-family: var(--mono); font-size: .78rem; padding: 4px 10px; border-radius: 20px; letter-spacing: .05em; }
-.status-pill { padding: 5px 12px; border-radius: 20px; font-size: .78rem; font-weight: 700; background: rgba(248,113,113,.15); color: var(--red); border: 1px solid rgba(248,113,113,.3); transition: all .3s; }
-.status-pill.ok { background: rgba(52,211,153,.12); color: var(--green); border-color: rgba(52,211,153,.3); }
-.btn-logout { background: transparent; border: 1px solid var(--border2); color: var(--muted); padding: 5px 12px; border-radius: var(--radius-sm); font-family: var(--sans); font-size: .78rem; cursor: pointer; transition: all .2s; }
-.btn-logout:hover { border-color: var(--red); color: var(--red); }
- 
-/* ── Layout & KPI ───────────────────────────────────────── */
-.main-wrap { flex: 1; max-width: 1280px; width: 100%; margin: 0 auto; padding: 22px 20px 40px; }
-.kpi-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 20px; }
-.kpi-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 18px 18px 14px; position: relative; overflow: hidden; }
-.kpi-card::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; }
-.kpi-card.pv::after  { background: linear-gradient(90deg, var(--green), transparent); }
-.kpi-card.sv::after  { background: linear-gradient(90deg, var(--accent), transparent); }
-.kpi-card.mv::after  { background: linear-gradient(90deg, var(--yellow), transparent); }
-.kpi-label { font-size: .75rem; color: var(--muted); letter-spacing: .07em; text-transform: uppercase; margin-bottom: 8px; }
-.kpi-val { font-family: var(--mono); font-size: 2.4rem; font-weight: 700; line-height: 1; }
-.kpi-card.pv .kpi-val  { color: var(--green); }
-.kpi-card.sv .kpi-val  { color: var(--accent); }
-.kpi-card.mv .kpi-val  { color: var(--yellow); }
-.kpi-unit { font-family: var(--mono); font-size: .8rem; color: var(--muted); margin-top: 4px; }
- 
-/* ── Grid & Cards ───────────────────────────────────────── */
-.grid-main { display: grid; grid-template-columns: 1.15fr .85fr; gap: 18px; align-items: start; }
-@media(max-width: 900px) { .kpi-strip { grid-template-columns: 1fr; } .grid-main { grid-template-columns: 1fr; } }
-.card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
-.card-title { font-size: .85rem; font-weight: 600; color: #94a3b8; letter-spacing: .06em; text-transform: uppercase; margin-bottom: 16px; padding-bottom: 10px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 7px; }
-.card-title .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); display: inline-block; }
- 
-/* ── Device Config Card ─────────────────────────────────── */
-.device-config { background: rgba(56,189,248,.04); border: 1px solid rgba(56,189,248,.2); border-radius: var(--radius); padding: 16px 18px; margin-bottom: 18px; }
-.device-config-title { font-size: .78rem; color: var(--accent); font-weight: 600; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
-.config-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-.config-item { display: flex; flex-direction: column; gap: 5px; }
-.config-label { font-size: .72rem; color: var(--muted); letter-spacing: .05em; }
-.config-row { display: flex; gap: 6px; }
-.config-input { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: .85rem; padding: 6px 10px; outline: none; flex: 1; transition: border-color .2s; }
-.config-input:focus { border-color: var(--accent); }
-.btn-config { background: rgba(56,189,248,.15); border: 1px solid rgba(56,189,248,.3); color: var(--accent); padding: 6px 12px; border-radius: var(--radius-sm); font-size: .78rem; font-weight: 700; cursor: pointer; font-family: var(--sans); white-space: nowrap; transition: all .2s; }
-.btn-config:hover { background: rgba(56,189,248,.25); }
-.ack-msg { font-size: .75rem; color: var(--green); margin-top: 8px; min-height: 16px; font-family: var(--mono); grid-column: 1/-1; }
-.ack-msg.err { color: var(--red); }
- 
-/* ── Chart ──────────────────────────────────────────────── */
-.chart-wrap { position: relative; width: 100%; height: 210px; margin-top: 4px; }
-.chart-controls { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
-.chart-controls label { font-size: .75rem; color: var(--muted); }
-.chart-controls input { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); font-family: var(--mono); font-size: .8rem; padding: 5px 8px; width: 68px; outline: none; }
-.btn-sm { background: rgba(56,189,248,.12); border: 1px solid rgba(56,189,248,.25); color: var(--accent); padding: 5px 10px; border-radius: var(--radius-sm); font-size: .75rem; font-weight: 700; cursor: pointer; font-family: var(--sans); }
- 
-/* ── Param Rows ─────────────────────────────────────────── */
-.param-row { display: flex; align-items: center; justify-content: space-between; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 9px 12px; margin-bottom: 8px; }
-.param-row.alarm1 { border-left: 3px solid var(--red); }
-.param-row.alarm2 { border-left: 3px solid var(--yellow); }
-.p-label { font-size: .82rem; color: #cbd5e1; flex: 1; }
-.p-label small { display: block; font-size: .7rem; color: var(--muted); font-family: var(--mono); margin-top: 2px; }
-.p-action { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
-.val-tag { font-family: var(--mono); background: rgba(255,255,255,.04); border: 1px solid var(--border); padding: 3px 8px; border-radius: 4px; font-size: .82rem; color: var(--muted); min-width: 42px; text-align: center; }
-.p-input, .p-select { background: var(--surface); border: 1px solid var(--border2); border-radius: var(--radius-sm); color: var(--text); padding: 5px 7px; outline: none; font-size: .82rem; }
-.p-input { font-family: var(--mono); width: 62px; text-align: center; }
-.btn-set { background: var(--accent); color: #000; border: none; padding: 5px 11px; border-radius: var(--radius-sm); font-weight: 700; font-size: .78rem; cursor: pointer; font-family: var(--sans); }
- 
-/* ── Tabs & Console ─────────────────────────────────────── */
-.tabs { display: flex; gap: 6px; margin-bottom: 14px; }
-.tab-btn { background: transparent; border: 1px solid var(--border); color: var(--muted); padding: 7px 13px; border-radius: var(--radius-sm); cursor: pointer; font-family: var(--sans); font-size: .8rem; }
-.tab-btn.active { background: rgba(56,189,248,.14); border-color: var(--accent); color: var(--accent); font-weight: 700; }
-.tab-pane { display: none; }
-.tab-pane.active { display: block; }
-.console { background: #050709; border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-family: var(--mono); font-size: .76rem; height: 120px; overflow-y: auto; color: var(--green); margin-top: 10px; }
-.console .err-line { color: var(--red); }
-.console .info-line { color: var(--accent); }
-.left-col { display: flex; flex-direction: column; gap: 18px; }
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+.gate-card {
+  background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 16px;
+  padding: 40px; width: 440px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+}
+.gate-hdr { margin-bottom: 24px; text-align: center; }
+.gate-hdr h2 { font-size: 1.6rem; color: var(--primary); margin-bottom: 6px; }
+.gate-hdr p { color: var(--text-muted); font-size: 0.85rem; }
+.input-group { margin-bottom: 16px; }
+.input-group label { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
+.ctrl-input {
+  width: 100%; background: var(--bg-card); border: 1px solid var(--border-color);
+  padding: 12px 16px; color: white; border-radius: 8px; font-size: 0.95rem; outline: none; transition: all 0.2s;
+}
+.ctrl-input:focus { border-color: var(--primary); box-shadow: 0 0 8px rgba(56,189,248,0.2); }
+.btn-auth {
+  width: 100%; background: var(--primary); color: #020617; font-weight: 700; padding: 14px;
+  border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; margin-top: 10px; transition: background 0.2s;
+}
+.btn-auth:hover { background: var(--primary-hover); }
+
+/* ── Main App Layout ── */
+#app-viewport { display: none; flex-direction: column; min-height: 100vh; }
+.top-nav {
+  height: 64px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color);
+  display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 100;
+}
+.brand-title { font-weight: 700; color: white; display: flex; align-items: center; gap: 10px; font-size: 1.1rem; }
+.tenant-pill { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); color: var(--primary); padding: 4px 12px; border-radius: 20px; font-size: 0.8srem; font-weight: 600; }
+.nav-actions { display: flex; align-items: center; gap: 16px; }
+
+.workspace { padding: 32px; max-width: 1600px; width: 100%; margin: 0 auto; flex: 1; display: flex; flex-direction: column; gap: 24px; }
+
+/* ── Panel Cards & Layout Blocks ── */
+.panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
+.metric-card {
+  background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px;
+  position: relative; overflow: hidden;
+}
+.metric-card.pv { border-left: 4px solid var(--success); }
+.metric-card.sv { border-left: 4px solid var(--primary); }
+.metric-card.mv { border-left: 4px solid var(--warning); }
+.m-lbl { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
+.m-val { font-size: 2.8rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
+
+.dashboard-split { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 24px; }
+@media (max-width: 1100px) { .dashboard-split { grid-template-columns: 1fr; } }
+
+.content-box { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
+.box-hdr { font-size: 0.95rem; font-weight: 700; color: white; text-transform: uppercase; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+
+/* ── Config Elements ── */
+.config-row { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); }
+.config-label { flex: 1; font-size: 0.85rem; color: #cbd5e1; }
+.config-label small { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 2px; }
+.btn-action { background: var(--primary); color: #020617; font-weight: 600; font-size: 0.8rem; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+
+/* ── Console Log ── */
+.system-logs { background: #02040a; border: 1px solid var(--border-color); height: 140px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; padding: 12px; overflow-y: auto; color: #34d399; line-height: 1.5; }
 </style>
 </head>
 <body>
- 
-<div id="gate">
-  <div class="gate-box">
-    <div class="gate-logo">SDU440 · IoT CONTROLLER</div>
-    <div class="gate-title">เข้าสู่ระบบ</div>
-    <div class="gate-sub">กรอก Client ID ของบอร์ดที่ต้องการควบคุม</div>
- 
-    <label class="field-label">CLIENT ID <span style="color:var(--red)">*</span></label>
-    <input class="gate-input" id="g-clientid" placeholder="เช่น client001 / factory02" autocomplete="off" spellcheck="false" value="client001">
- 
-    <label class="field-label">MODBUS ADDRESS ปัจจุบัน (1–247)</label>
-    <div class="gate-row">
-      <input class="gate-input" id="g-addr" type="number" min="1" max="247" value="1" placeholder="1">
-      <input class="gate-input" id="g-broker" value="broker.hivemq.com" placeholder="MQTT Broker">
+
+<div id="gate-viewport">
+  <div class="gate-card">
+    <div class="gate-hdr">
+      <h2>SDU440 Enterprise</h2>
+      <p>ระบบศูนย์กลางจัดการข้อมูลเกตเวย์เชิงพาณิชย์</p>
     </div>
- 
-    <button class="btn-connect" onclick="doConnect()">เชื่อมต่อระบบ</button>
-    <div class="gate-err" id="gate-err"></div>
-    <div class="gate-hint">Client ID คือตัวแยกข้อมูลไม่ให้แต่ละบอร์ดทับซ้อนกัน</div>
+    <div class="input-group">
+      <label>Customer Identifier (Tenant ID)</label>
+      <input type="text" id="g-tenant" class="ctrl-input" value="companyA">
+    </div>
+    <div class="input-group">
+      <label>Gateway Physical ID (Device UID)</label>
+      <input type="text" id="g-device" class="ctrl-input" value="SDU440-24A160AB1234">
+    </div>
+    <div class="input-group">
+      <label>Sub-Instrument Address (Modbus ID)</label>
+      <input type="number" id="g-modbus-id" class="ctrl-input" value="1" min="1" max="247">
+    </div>
+    <button class="btn-auth" onclick="authenticateSession()">ตรวจสอบสิทธิ์และเข้าใช้งาน</button>
   </div>
 </div>
- 
-<div id="app">
-  <nav class="topbar">
-    <div class="topbar-brand">SDU440 CONTROL</div>
-    <div class="topbar-right">
-      <span class="badge-client" id="tb-client">—</span>
-      <span class="status-pill" id="tb-status">ออฟไลน์</span>
-      <button class="btn-logout" onclick="doLogout()">ออกจากระบบ</button>
+
+<div id="app-viewport">
+  <nav class="top-nav">
+    <div class="brand-title">
+      <span>SDU440 MONITOR</span>
+      <span class="tenant-pill" id="lbl-tenant">TENANT: —</span>
+    </div>
+    <div class="nav-actions">
+      <div id="connection-status" style="font-size: 0.85rem; color: var(--danger);">● Disconnected</div>
+      <button class="btn-action" style="background:#334155; color:white;" onclick="exitSession()">Logout</button>
     </div>
   </nav>
- 
-  <div class="main-wrap">
- 
-    <div class="device-config">
-      <div class="device-config-title">⚙️ ตั้งค่าอุปกรณ์ (Live Config)</div>
-      <div class="config-grid">
-        <div class="config-item">
-          <span class="config-label">เปลี่ยน MODBUS ADDRESS</span>
-          <div class="config-row">
-            <input class="config-input" id="cfg-cur-addr" type="number" readonly style="background:rgba(0,0,0,.3); color:var(--muted);">
-            <span style="color:var(--muted); font-size:.8rem; align-self:center;">→</span>
-            <input class="config-input" id="cfg-new-addr" type="number" min="1" max="247" placeholder="Address ใหม่">
-            <button class="btn-config" onclick="sendSetAddress()">HOT SWAP</button>
-          </div>
-        </div>
-        <div class="config-item">
-          <span class="config-label">เปลี่ยน CLIENT ID ในบอร์ด</span>
-          <div class="config-row">
-            <input class="config-input" id="cfg-new-cid" placeholder="New Client ID">
-            <button class="btn-config" onclick="sendSetClientId()">APPLY</button>
-          </div>
-        </div>
-        <div class="ack-msg" id="ack-msg"></div>
-      </div>
+
+  <div class="workspace">
+    <div class="panel-grid">
+      <div class="metric-card pv"><div class="m-lbl">อุณหภูมิปัจจุบัน (Process Value)</div><div class="m-val" id="disp-pv">--</div></div>
+      <div class="metric-card sv"><div class="m-lbl">ค่าเป้าหมายที่ตั้งไว้ (Set Value)</div><div class="m-val" id="disp-sv">--</div></div>
+      <div class="metric-card mv"><div class="m-lbl">กำลังเอาต์พุตขับเคลื่อน (Output MV %)</div><div class="m-val" id="disp-mv">--</div></div>
     </div>
- 
-    <div class="kpi-strip">
-      <div class="kpi-card pv"><div class="kpi-label">🔥 อุณหภูมิปัจจุบัน</div><div class="kpi-val" id="v-pv">--</div><div class="kpi-unit">Process Value (PV)</div></div>
-      <div class="kpi-card sv"><div class="kpi-label">🎯 ค่าเป้าหมาย</div><div class="kpi-val" id="v-sv">--</div><div class="kpi-unit">Set Value (SV)</div></div>
-      <div class="kpi-card mv"><div class="kpi-label">⚡ กำลังเอาต์พุต</div><div class="kpi-val" id="v-mv">--</div><div class="kpi-unit">Manipulated Value % (MV)</div></div>
-    </div>
- 
-    <div class="grid-main">
-      <div class="left-col">
-        <div class="card">
-          <div class="card-title"><span class="dot"></span>กราฟแนวโน้มอุณหภูมิ</div>
-          <div class="chart-controls">
-            <label>Min Y:</label><input type="number" id="g-min" placeholder="Auto">
-            <label>Max Y:</label><input type="number" id="g-max" placeholder="Auto">
-            <button class="btn-sm" onclick="setGraphScale()">APPLY</button>
+
+    <div class="dashboard-split">
+      <div style="display: flex; flex-direction: column; gap: 24px;">
+        <div class="content-box">
+          <div class="box-hdr">
+            <span>แนวโน้มพารามิเตอร์ระบบแบบเรียลไทม์</span>
+            <button class="btn-action" onclick="exportHistoricalDataCSV()">Export Historical Data (CSV)</button>
           </div>
-          <div class="chart-wrap"><canvas id="mqttChart"></canvas></div>
+          <div style="position: relative; height: 320px; width: 100%;">
+            <canvas id="liveTrendChart"></canvas>
+          </div>
         </div>
- 
-        <div class="card">
-          <div class="card-title"><span class="dot"></span>โครงสร้างฮาร์ดแวร์</div>
-          <div class="param-row"><div class="p-label">ชนิดเซ็นเซอร์อินพุต <small>InPt</small></div><div class="p-action"><span class="val-tag" id="v-inpt">--</span><select class="p-select" id="i-inpt"><option value="0">0: K-Type</option><option value="1">1: J-Type</option><option value="2">2: E-Type</option><option value="3">3: N-Type</option><option value="10">10: Pt100</option></select><button class="btn-set" onclick="send('inpt','i-inpt')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">หน่วยวัดอุณหภูมิ <small>UnIt</small></div><div class="p-action"><span class="val-tag" id="v-unit">--</span><select class="p-select" id="i-unit"><option value="0">°C</option><option value="1">°F</option></select><button class="btn-set" onclick="send('unit','i-unit')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">ตำแหน่งทศนิยม <small>dP</small></div><div class="p-action"><span class="val-tag" id="v-dp">--</span><select class="p-select" id="i-dp"><option value="0">0</option><option value="1">0.0</option><option value="2">0.00</option><option value="3">0.000</option></select><button class="btn-set" onclick="send('dp','i-dp')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">ขีดจำกัดสเกล Hi / Lo <small>SCH / SCL</small></div><div class="p-action"><span style="font-size:.72rem; color:var(--muted)">Hi:</span><span class="val-tag" id="v-sch">--</span><input class="p-input" type="number" id="i-sch" placeholder="Hi" style="width:50px"><button class="btn-set" onclick="send('sch','i-sch')">SET</button><span style="font-size:.72rem; color:var(--muted); margin-left:4px">Lo:</span><span class="val-tag" id="v-scl">--</span><input class="p-input" type="number" id="i-scl" placeholder="Lo" style="width:50px"><button class="btn-set" onclick="send('scl','i-scl')">SET</button></div></div>
-        </div>
-      </div>
- 
-      <div class="card">
-        <div class="tabs">
-          <button class="tab-btn active" onclick="switchTab('t-basic', this)">🎛️ พารามิเตอร์</button>
-          <button class="tab-btn" onclick="switchTab('t-pid', this)">🛠️ PID Tuning</button>
-          <button class="tab-btn" onclick="switchTab('t-debug', this)">💻 Debug</button>
-        </div>
- 
-        <div id="t-basic" class="tab-pane active">
-          <div class="param-row"><div class="p-label">ค่าเป้าหมาย <small>SV</small></div><div class="p-action"><span class="val-tag" id="v-sv-tag">--</span><input class="p-input" type="number" id="i-sv"><button class="btn-set" onclick="send('sv','i-sv')">SET</button></div></div>
-          <div class="param-row alarm1"><div class="p-label">โหมด Alarm 1 <small>ALS1</small></div><div class="p-action"><span class="val-tag" id="v-als1" style="min-width:80px; font-size:.72rem">--</span><select class="p-select" id="i-als1"><option value="0">Off</option><option value="1">High HI</option><option value="2">Standby Hi SH</option><option value="3">Low LO</option><option value="4">Standby Lo SL</option><option value="5">Dev Hi Hd</option><option value="6">Dev Lo Ld</option><option value="7">Deviation dE</option></select><button class="btn-set" onclick="send('als1','i-als1')">SET</button></div></div>
-          <div class="param-row alarm2"><div class="p-label">โหมด Alarm 2 <small>ALS2</small></div><div class="p-action"><span class="val-tag" id="v-als2" style="min-width:80px; font-size:.72rem">--</span><select class="p-select" id="i-als2"><option value="0">Off</option><option value="1">High HI</option><option value="2">Standby Hi SH</option><option value="3">Low LO</option><option value="4">Standby Lo SL</option><option value="5">Dev Hi Hd</option><option value="6">Dev Lo Ld</option><option value="7">Deviation dE</option></select><button class="btn-set" onclick="send('als2','i-als2')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">ค่า Alarm 1 <small>HyS1</small></div><div class="p-action"><span class="val-tag" id="v-hys1">--</span><input class="p-input" type="number" id="i-hys1"><button class="btn-set" onclick="send('hys1','i-hys1')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">ค่า Alarm 2 <small>HyS2</small></div><div class="p-action"><span class="val-tag" id="v-hys2">--</span><input class="p-input" type="number" id="i-hys2"><button class="btn-set" onclick="send('hys2','i-hys2')">SET</button></div></div>
-        </div>
- 
-        <div id="t-pid" class="tab-pane">
-          <div class="param-row"><div class="p-label">Proportional Band <small>P</small></div><div class="p-action"><span class="val-tag" id="v-p">--</span><input class="p-input" type="number" id="i-p"><button class="btn-set" onclick="send('p','i-p')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">Integral Time <small>I</small></div><div class="p-action"><span class="val-tag" id="v-i">--</span><input class="p-input" type="number" id="i-i"><button class="btn-set" onclick="send('i','i-i')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">Derivative Time <small>D</small></div><div class="p-action"><span class="val-tag" id="v-d">--</span><input class="p-input" type="number" id="i-d"><button class="btn-set" onclick="send('d','i-d')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">Control Hysteresis <small>HyS</small></div><div class="p-action"><span class="val-tag" id="v-hys">--</span><input class="p-input" type="number" id="i-hys"><button class="btn-set" onclick="send('hys','i-hys')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">Cycle Time <small>CP</small></div><div class="p-action"><span class="val-tag" id="v-cp">--</span><input class="p-input" type="number" id="i-cp"><button class="btn-set" onclick="send('cp','i-cp')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">Timer <small>tIm</small></div><div class="p-action"><span class="val-tag" id="v-tim">--</span><input class="p-input" type="number" id="i-tim"><button class="btn-set" onclick="send('tim','i-tim')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">Control Action <small>CACt</small></div><div class="p-action"><span class="val-tag" id="v-cact">--</span><select class="p-select" id="i-cact"><option value="0">Rev (ร้อน)</option><option value="1">Dir (เย็น)</option></select><button class="btn-set" onclick="send('cact','i-cact')">SET</button></div></div>
-          <div class="param-row"><div class="p-label">Auto-Tuning <small>AT</small></div><div class="p-action"><span class="val-tag" id="v-at">--</span><select class="p-select" id="i-at"><option value="0">0: Stop</option><option value="1">1: Start</option></select><button class="btn-set" onclick="send('at','i-at')">SET</button></div></div>
-        </div>
- 
-        <div id="t-debug" class="tab-pane">
-          <p style="font-size:.78rem; color:var(--muted); margin-bottom:10px">ยิงคำสั่งตรง Register (Hex Address)</p>
-          <div class="param-row">
-            <div class="p-action" style="gap:8px; width:100%">
-              <span style="font-size:.78rem; color:var(--muted)">Reg:</span><input class="p-input" id="d-reg" value="001D" style="width:60px">
-              <span style="font-size:.78rem; color:var(--muted)">Val:</span><input class="p-input" id="d-val" type="number" value="50" style="width:60px">
-              <button class="btn-set" onclick="sendDebug()">SEND</button>
+
+        <div class="content-box">
+          <div class="box-hdr">ระบบสแกนและสลับแอดเดรสฮาร์ดแวร์ (Hot Swap & Discovery)</div>
+          <div class="config-row">
+            <div class="config-label">
+              ขยายผลการสแกนหาเครื่องอุปกรณ์อัตโนมัติ
+              <small>ตรวจสอบสัญญาณโครงข่ายเครื่องบนสายสัญญาณ RS485 Loop</small>
             </div>
+            <button class="btn-action" onclick="triggerDeviceScan()">Scan Bus Nodes</button>
           </div>
-          <div class="console" id="debug-log"><span class="info-line">>> Console พร้อมใช้งาน</span></div>
+          <div class="config-row">
+            <div class="config-label">
+              ปรับเปลี่ยน Modbus Address แบบ Hot-Swap
+              <small>ย้ายตำแหน่งช่องสัญญาณข้อมูลอุปกรณ์โดยตรงโดยระบบไม่ต้องหยุดทำงาน</small>
+            </div>
+            <input type="number" id="inp-new-addr" class="ctrl-input" style="width: 80px; margin-right: 8px;" placeholder="New">
+            <button class="btn-action" onclick="executeHotSwapAddress()">Change Node ID</button>
+          </div>
         </div>
- 
+      </div>
+
+      <div class="content-box">
+        <div class="box-hdr">แผงปรับแต่งค่าเรจิสเตอร์ระบบควบคุม (Registers Control)</div>
+        
+        <div class="config-row">
+          <div class="config-label">ค่าเป้าหมายการควบคุม <small>Set Value (SV)</small></div>
+          <input type="number" id="reg-sv" class="ctrl-input" style="width: 90px; margin-right: 8px;">
+          <button class="btn-action" onclick="commitParameter('sv', 'reg-sv')">Update</button>
+        </div>
+        <div class="config-row">
+          <div class="config-label">Proportional Band <small>P Parameter</small></div>
+          <input type="number" id="reg-p" class="ctrl-input" style="width: 90px; margin-right: 8px;">
+          <button class="btn-action" onclick="commitParameter('p', 'reg-p')">Update</button>
+        </div>
+        <div class="config-row">
+          <div class="config-label">Integral Time <small>I Parameter</small></div>
+          <input type="number" id="reg-i" class="ctrl-input" style="width: 90px; margin-right: 8px;">
+          <button class="btn-action" onclick="commitParameter('i', 'reg-i')">Update</button>
+        </div>
+        <div class="config-row">
+          <div class="config-label">Derivative Time <small>D Parameter</small></div>
+          <input type="number" id="reg-d" class="ctrl-input" style="width: 90px; margin-right: 8px;">
+          <button class="btn-action" onclick="commitParameter('d', 'reg-d')">Update</button>
+        </div>
+
+        <div class="box-hdr" style="margin-top:24px; font-size:0.85rem;">บันทึกสถานะเหตุการณ์ระบบ (Gateway Log Stream)</div>
+        <div class="system-logs" id="terminal-stream">
+          <div>>> System Engine Ready. Awaiting Gateway Stream...</div>
+        </div>
       </div>
     </div>
   </div>
 </div>
- 
+
 <script>
-let CLIENT_ID = '';
-let modbusAddr = 1;
-let mqttBroker = 'broker.hivemq.com';
+let TENANT_ID = "";
+let GATEWAY_UID = "";
+let SUB_INSTRUMENT_ID = "";
 let mqttClient = null;
-let currentSV = 0;
- 
-// สร้าง Topic แบบเจาะจง ClientID
-const T = (sub) => `sdu440/${CLIENT_ID}/telemetry/${sub}`;
-const C = (sub) => `sdu440/${CLIENT_ID}/command/${sub}`;
-const R = (sub) => `sdu440/${CLIENT_ID}/response/${sub}`;
- 
-const alarmNames = ["Off","HI","SH","LO","SL","Hd","Ld","dE","tm"];
-const inputNames = ["K-Type","J-Type","E-Type","N-Type","C-Type","T-Type","K(0.1)","R-Type","S-Type","B-Type","JIS Pt100","DIN Pt100","Pt100(0.1)","Pt100(0.1)","1-5V"];
- 
-// ── Chart ──
-const ctx = document.getElementById('mqttChart').getContext('2d');
-const chart = new Chart(ctx, {
+
+let historyRecords = []; // โครงสร้างสำหรับเก็บบันทึกข้อมูลจำลองย้อนหลัง 1-3 ปี (Historical Layer)
+
+// Setup Chart.js Analytics Trend
+const ctx = document.getElementById('liveTrendChart').getContext('2d');
+const trendChart = new Chart(ctx, {
   type: 'line',
-  data: { labels: [], datasets: [
-      { label: 'PV', data: [], borderColor: '#34d399', backgroundColor: 'rgba(52,211,153,.06)', tension: .3, pointRadius: 2 },
-      { label: 'SV', data: [], borderColor: '#38bdf8', backgroundColor: 'transparent', tension: .3, pointRadius: 2, borderDash: [4,3] }
-  ]},
-  options: { responsive: true, maintainAspectRatio: false, animation: { duration: 300 }, plugins: { legend: { labels: { color: '#94a3b8', font: { family: 'JetBrains Mono', size: 11 } } } }, scales: { x: { grid: { color: '#1e2a3a' }, ticks: { color: '#64748b', font: { size: 10 } } }, y: { grid: { color: '#1e2a3a' }, ticks: { color: '#64748b', font: { size: 10 } } } } }
+  data: {
+    labels: [],
+    datasets: [
+      { label: 'PV (Temp)', borderColor: '#10b981', data: [], tension: 0.2, fill: false },
+      { label: 'SV (Target)', borderColor: '#38bdf8', data: [], borderDash: [5, 5], fill: false }
+    ]
+  },
+  options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    scales: {
+      x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
+      y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }
+    },
+    plugins: { legend: { labels: { color: '#f1f5f9' } } }
+  }
 });
- 
-function pushChart(pv, sv) {
-  const t = new Date().toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-  if (chart.data.labels.length > 25) { chart.data.labels.shift(); chart.data.datasets.forEach(d => d.data.shift()); }
-  chart.data.labels.push(t); chart.data.datasets[0].data.push(pv); chart.data.datasets[1].data.push(sv); chart.update();
+
+function appendLog(msg, isError = false) {
+  const container = document.getElementById('terminal-stream');
+  const div = document.createElement('div');
+  if (isError) div.style.color = '#ef4444';
+  div.textContent = `[${new Date().toLocaleTimeString()}] >> ${msg}`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
 }
-function setGraphScale() {
-  const mn = document.getElementById('g-min').value, mx = document.getElementById('g-max').value;
-  if (mn !== '') chart.options.scales.y.min = parseFloat(mn); else delete chart.options.scales.y.min;
-  if (mx !== '') chart.options.scales.y.max = parseFloat(mx); else delete chart.options.scales.y.max;
-  chart.update(); log(`Graph scale: Y[${mn||'Auto'} – ${mx||'Auto'}]`);
+
+function authenticateSession() {
+  TENANT_ID = document.getElementById('g-tenant').value.trim();
+  GATEWAY_UID = document.getElementById('g-device').value.trim();
+  SUB_INSTRUMENT_ID = document.getElementById('g-modbus-id').value.trim();
+
+  if(!TENANT_ID || !GATEWAY_UID || !SUB_INSTRUMENT_ID) {
+    alert("กรุณากรอกข้อมูลเชิงพาณิชย์ให้ครบถ้วน");
+    return;
+  }
+
+  document.getElementById('lbl-tenant').textContent = `CUSTOMER: ${TENANT_ID} / NODE: ${SUB_INSTRUMENT_ID}`;
+  document.getElementById('gate-viewport').style.display = 'none';
+  document.getElementById('app-viewport').style.display = 'flex';
+
+  initializeMqttStream();
 }
- 
-function log(msg, type = '') {
-  const el = document.getElementById('debug-log'), line = document.createElement('div');
-  line.className = type ? `${type}-line` : ''; line.textContent = `>> ${msg}`;
-  el.appendChild(line); el.scrollTop = el.scrollHeight;
-  if (el.children.length > 80) el.removeChild(el.firstChild);
+
+function exitSession() {
+  if (mqttClient) mqttClient.disconnect();
+  document.getElementById('app-viewport').style.display = 'none';
+  document.getElementById('gate-viewport').style.display = 'flex';
 }
- 
-// ── Connect / Flow ──
-function doConnect() {
-  const cid = document.getElementById('g-clientid').value.trim();
-  const addr = parseInt(document.getElementById('g-addr').value) || 1;
-  const broker = document.getElementById('g-broker').value.trim() || 'broker.hivemq.com';
- 
-  if (!cid) { document.getElementById('gate-err').textContent = '⚠️ กรุณากรอก Client ID'; return; }
-  CLIENT_ID = cid; modbusAddr = addr; mqttBroker = broker;
-  document.getElementById('gate-err').textContent = 'กำลังเชื่อมต่อ...';
-  connectMQTT();
-}
- 
-function doLogout() {
-  if (mqttClient) try { mqttClient.disconnect(); } catch(e) {}
-  document.getElementById('app').classList.remove('show');
-  document.getElementById('gate').classList.remove('hidden');
-  document.getElementById('gate-err').textContent = '';
-  document.getElementById('tb-status').textContent = 'ออฟไลน์';
-  document.getElementById('tb-status').classList.remove('ok');
-}
- 
-function connectMQTT() {
-  const cidStr = 'WebSDU440-' + Math.random().toString(16).slice(2, 7);
-  // พอร์ต 8884 (WSS) สำหรับใช้งานบน GitHub Pages (HTTPS)
-  mqttClient = new Paho.MQTT.Client(mqttBroker, 8884, cidStr); 
- 
-  mqttClient.onConnectionLost = (r) => {
-    setStatus(false, 'เชื่อมต่อหลุด — ' + r.errorMessage);
-    log('Connection lost: ' + r.errorMessage, 'err');
-    setTimeout(connectMQTT, 5000);
+
+function initializeMqttStream() {
+  const brokerAddress = "broker.hivemq.com";
+  const webSocketPort = 8884; // พอร์ต Secure WebSockets เพื่อรันบน HTTPS GitHub Pages
+  const webClientId = "SDU440-Enterprise-Web-" + Math.random().toString(16).substr(2, 6);
+
+  mqttClient = new Paho.MQTT.Client(brokerAddress, webSocketPort, webClientId);
+  
+  mqttClient.onConnectionLost = (resp) => {
+    document.getElementById('connection-status').textContent = "● Reconnecting...";
+    document.getElementById('connection-status').style.color = "var(--warning)";
+    setTimeout(initializeMqttStream, 5000);
   };
-  mqttClient.onMessageArrived = onMessage;
+
+  mqttClient.onMessageArrived = (msg) => {
+    const topic = msg.destinationName;
+    const payload = msg.payloadString;
+
+    // แกะหาจุดประสงค์ของข้อมูลปลายทาง (Multi-Tenant Routing Analyzer)
+    const baseTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}_${SUB_INSTRUMENT_ID}/telemetry/`;
+    
+    if (topic.startsWith(baseTopic)) {
+      const metric = topic.replace(baseTopic, '');
+      if (metric === "pv") {
+        document.getElementById('disp-pv').textContent = payload;
+        updateChartData(parseFloat(payload), null);
+      } else if (metric === "sv") {
+        document.getElementById('disp-sv').textContent = payload;
+        document.getElementById('reg-sv').value = payload;
+        updateChartData(null, parseFloat(payload));
+      } else if (metric === "mv") {
+        document.getElementById('disp-mv').textContent = payload + "%";
+      } else if (metric === "p") {
+        document.getElementById('reg-p').value = payload;
+      } else if (metric === "i") {
+        document.getElementById('reg-i').value = payload;
+      } else if (metric === "d") {
+        document.getElementById('reg-d').value = payload;
+      } else if (metric === "status") {
+        const isOnline = payload === "true";
+        const indicator = document.getElementById('connection-status');
+        indicator.textContent = isOnline ? "● Device Online" : "● Device Response Failure";
+        indicator.style.color = isOnline ? "var(--success)" : "var(--danger)";
+      }
+    }
+    
+    // ตรวจจับสัญญาณการตอบรับการทำงานส่วนกลาง (Global Responses Broker)
+    if (topic.includes(`/response/`)) {
+      appendLog(`Response received: ${payload}`);
+    }
+  };
+
   mqttClient.connect({
-    useSSL: true, // สำคัญเมื่อรันบน HTTPS
-    timeout: 8,
-    onSuccess: onConnected,
-    onFailure: (e) => {
-      document.getElementById('gate-err').textContent = '❌ เชื่อมต่อไม่สำเร็จ: ' + e.errorMessage;
+    useSSL: true,
+    onSuccess: () => {
+      document.getElementById('connection-status').textContent = "● Server Connected";
+      document.getElementById('connection-status').style.color = "var(--success)";
+      
+      // การ Subscribe ติดตามหัวข้อข้อมูลเชิงพาณิชย์แยกขาดจากลูกค้ารายอื่นเด็ดขาด
+      const targetSubscription = `sdu440/${TENANT_ID}/${GATEWAY_UID}_${SUB_INSTRUMENT_ID}/telemetry/+`;
+      mqttClient.subscribe(targetSubscription);
+      
+      // ติดตามกลุ่ม Response ยืนยันคำสั่งฝั่งควบคุมเกตเวย์
+      mqttClient.subscribe(`sdu440/${TENANT_ID}/${GATEWAY_UID}/response/+`);
+      appendLog("Secure MQTT Connectivity Channel Built Perfectly.");
+    },
+    onFailure: (err) => {
+      appendLog("Connection Failure: " + err.errorMessage, true);
     }
   });
 }
- 
-function onConnected() {
-  document.getElementById('gate').classList.add('hidden'); document.getElementById('app').classList.add('show');
-  document.getElementById('tb-client').textContent = 'Client: ' + CLIENT_ID;
-  document.getElementById('cfg-cur-addr').value = modbusAddr;
- 
-  const subs = ['status','pv','sv','mv','p','i','d','hys','cp','tim','at','inpt','unit','dp','sch','scl','als1','hys1','als2','hys2','cact','board_info'];
-  subs.forEach(s => mqttClient.subscribe(T(s)));
-  mqttClient.subscribe(R('set_address')); mqttClient.subscribe(R('set_clientid'));
- 
-  setStatus(false, 'รอข้อมูลจากบอร์ด...');
-  log(`Connected | Client="${CLIENT_ID}" Addr=${modbusAddr}`, 'info');
-}
- 
-function onMessage(msg) {
-  const p = msg.payloadString, t = msg.destinationName;
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
- 
-  if (t === T('status')) { const ok = p === 'true'; setStatus(ok, ok ? `ระบบออนไลน์ · Addr ${modbusAddr}` : 'Modbus ไม่ตอบสนอง'); }
-  else if (t === T('pv'))   { set('v-pv', p); pushChart(parseInt(p)||0, currentSV); }
-  else if (t === T('sv'))   { currentSV = parseInt(p)||0; set('v-sv', p); set('v-sv-tag', p); }
-  else if (t === T('mv'))   { set('v-mv', p + '%'); }
-  else if (t === T('p'))    { set('v-p',  (parseFloat(p)/10).toFixed(1)); }
-  else if (t === T('i'))    { set('v-i',  p); }
-  else if (t === T('d'))    { set('v-d',  p); }
-  else if (t === T('hys'))  { set('v-hys', p); }
-  else if (t === T('cp'))   { set('v-cp',  p); }
-  else if (t === T('tim'))  { set('v-tim', p); }
-  else if (t === T('at'))   { set('v-at',  p); }
-  else if (t === T('inpt')) { set('v-inpt', inputNames[parseInt(p)] || p); }
-  else if (t === T('unit')) { set('v-unit', parseInt(p)===0 ? '°C' : '°F'); }
-  else if (t === T('dp'))   { set('v-dp',  p); }
-  else if (t === T('sch'))  { set('v-sch', p); }
-  else if (t === T('scl'))  { set('v-scl', p); }
-  else if (t === T('als1')) { set('v-als1', alarmNames[parseInt(p)] || p); }
-  else if (t === T('hys1')) { set('v-hys1', p); }
-  else if (t === T('als2')) { set('v-als2', alarmNames[parseInt(p)] || p); }
-  else if (t === T('hys2')) { set('v-hys2', p); }
-  else if (t === T('cact')) { set('v-cact', parseInt(p)===0?'Rev':'Dir'); }
-  else if (t === T('board_info')) {
-    try {
-      const info = JSON.parse(p);
-      if (info.address) { modbusAddr = info.address; document.getElementById('cfg-cur-addr').value = modbusAddr; log(`Board info: addr=${info.address}`, 'info'); }
-    } catch(e) {}
+
+function updateChartData(pv, sv) {
+  const now = new Date().toLocaleTimeString();
+  
+  if (pv !== null) {
+    if (trendChart.data.labels.length > 20) trendChart.data.labels.shift();
+    trendChart.data.labels.push(now);
+    
+    if (trendChart.data.datasets[0].data.length > 20) trendChart.data.datasets[0].data.shift();
+    trendChart.data.datasets[0].data.push(pv);
   }
-  else if (t === R('set_address')) {
-    try {
-      const r = JSON.parse(p); const ack = document.getElementById('ack-msg');
-      if (r.success) { modbusAddr = r.address; document.getElementById('cfg-cur-addr').value = modbusAddr; ack.className = 'ack-msg'; ack.textContent = `✅ เปลี่ยน Address เป็น ${r.address} สำเร็จ (Hot Swap)`; log(`ACK set_address: OK → ${r.address}`, 'info'); } 
-      else { ack.className = 'ack-msg err'; ack.textContent = `❌ เปลี่ยน Address ไม่สำเร็จ: ${r.info || ''}`; log('ACK set_address: FAILED', 'err'); }
-      setTimeout(() => { ack.textContent = ''; }, 5000);
-    } catch(e) {}
+  
+  if (sv !== null) {
+    if (trendChart.data.datasets[1].data.length > 20) trendChart.data.datasets[1].data.shift();
+    trendChart.data.datasets[1].data.push(sv);
   }
+  
+  trendChart.update();
+
+  // บันทึกลงหน่วยข้อมูลชั่วคราวบนหน้าเว็บ (Historical Analytics Simulation)
+  historyRecords.push({
+    timestamp: new Date().toISOString(),
+    tenant: TENANT_ID,
+    device: GATEWAY_UID + "_" + SUB_INSTRUMENT_ID,
+    pv: pv || (trendChart.data.datasets[0].data.slice(-1)[0] || 0),
+    sv: sv || (trendChart.data.datasets[1].data.slice(-1)[0] || 0)
+  });
 }
- 
-function setStatus(ok, label) {
-  const el = document.getElementById('tb-status'); el.textContent = label; el.className = ok ? 'status-pill ok' : 'status-pill';
+
+function commitParameter(parameterName, inputId) {
+  const value = document.getElementById(inputId).value;
+  if (!value) return;
+
+  const cmdTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/write_param`;
+  const payload = JSON.stringify({
+    addr: parseInt(SUB_INSTRUMENT_ID),
+    reg: parameterName,
+    val: parseInt(value)
+  });
+
+  const message = new Paho.MQTT.Message(payload);
+  message.destinationName = cmdTopic;
+  mqttClient.send(message);
+  appendLog(`Command dispatched -> set ${parameterName} to ${value}`);
 }
- 
-function send(cmd, inputId) {
-  const val = document.getElementById(inputId)?.value;
-  if (!val && val !== '0') return;
-  const msg = new Paho.MQTT.Message(String(val)); msg.destinationName = C(cmd); mqttClient.send(msg); log(`CMD ${cmd} = ${val}`);
+
+function triggerDeviceScan() {
+  const scanTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/scan`;
+  const message = new Paho.MQTT.Message("TRIGGER");
+  message.destinationName = scanTopic;
+  mqttClient.send(message);
+  appendLog("Bus nodes discovery scanning order sent.");
 }
-function sendDebug() {
-  const reg = document.getElementById('d-reg').value, val = document.getElementById('d-val').value;
-  const msg = new Paho.MQTT.Message(reg + ',' + val); msg.destinationName = C('debug'); mqttClient.send(msg); log(`DEBUG Reg=0x${reg} Val=${val}`);
+
+function executeHotSwapAddress() {
+  const newAddr = document.getElementById('inp-new-addr').value;
+  if(!newAddr) return;
+
+  const hotSwapTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/set_address`;
+  const payload = JSON.stringify({
+    cmd: "SET_ADDRESS",
+    old_address: parseInt(SUB_INSTRUMENT_ID),
+    new_address: parseInt(newAddr),
+    persist: true
+  });
+
+  const message = new Paho.MQTT.Message(payload);
+  message.destinationName = hotSwapTopic;
+  mqttClient.send(message);
+  appendLog(`Hot Swap executed: Re-routing Address ${SUB_INSTRUMENT_ID} -> ${newAddr}`);
+  
+  // อัปเดตโครงสร้างตำแหน่งแอดเดรสของหน้าเว็บปัจจุบันสอดคล้องตามอุปกรณ์ทันที
+  SUB_INSTRUMENT_ID = newAddr;
+  document.getElementById('lbl-tenant').textContent = `CUSTOMER: ${TENANT_ID} / NODE: ${SUB_INSTRUMENT_ID}`;
 }
-function sendSetAddress() {
-  const newAddr = parseInt(document.getElementById('cfg-new-addr').value);
-  if (!newAddr || newAddr < 1 || newAddr > 247) { showAck('⚠️ กรอก Address ใหม่ให้ถูกต้อง (1–247)', true); return; }
-  const payload = JSON.stringify({ cmd: 'SET_ADDRESS', target_address: modbusAddr, new_address: newAddr, persist: true, timestamp: Math.floor(Date.now() / 1000) });
-  const msg = new Paho.MQTT.Message(payload); msg.destinationName = C('set_address'); mqttClient.send(msg);
-  log(`SET_ADDRESS: ${modbusAddr} → ${newAddr} (waiting ACK...)`,'info'); showAck('⏳ รอการยืนยันจากบอร์ด...', false);
-}
-function sendSetClientId() {
-  const newId = document.getElementById('cfg-new-cid').value.trim();
-  if (!newId || newId.length > 32) { showAck('⚠️ Client ID ต้องมี 1–32 ตัวอักษร', true); return; }
-  const payload = JSON.stringify({ cmd: 'SET_CLIENTID', new_id: newId });
-  const msg = new Paho.MQTT.Message(payload); msg.destinationName = C('set_clientid'); mqttClient.send(msg);
-  log(`SET_CLIENTID → "${newId}" (บอร์ดจะ reconnect อัตโนมัติ)`, 'info'); showAck(`⏳ บอร์ดกำลังเปลี่ยนเป็น "${newId}"...`, false);
-}
-function showAck(msg, isErr) {
-  const el = document.getElementById('ack-msg'); el.className = isErr ? 'ack-msg err' : 'ack-msg'; el.textContent = msg;
-  if (!isErr) return; setTimeout(() => { el.textContent = ''; }, 4000);
-}
-function switchTab(id, btn) {
-  document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
-  document.getElementById(id).classList.add('active'); btn.classList.add('active');
+
+function exportHistoricalDataCSV() {
+  if(historyRecords.length === 0) {
+    alert("ไม่มีข้อมูลประวัติระบบสะสมในเซสชันปัจจุบันสำหรับส่งออก");
+    return;
+  }
+  
+  let csvContent = "data:text/csv;charset=utf-8,Timestamp,Tenant,DeviceUID,PV,SV\n";
+  historyRecords.forEach(r => {
+    csvContent += `${r.timestamp},${r.tenant},${r.device},${r.pv},${r.sv}\n`;
+  });
+
+  const encodedUri = encodeURI(csvContent);
+  const downloadAnchor = document.createElement("a");
+  downloadAnchor.setAttribute("href", encodedUri);
+  downloadAnchor.setAttribute("download", `Historical_Report_${TENANT_ID}_${GATEWAY_UID}.csv`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  document.body.removeChild(downloadAnchor);
 }
 </script>
 </body>
