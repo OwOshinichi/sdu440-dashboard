@@ -1,430 +1,643 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SDU440 Commercial IoT Center</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<style>
-:root {
-  --bg-main: #060813;
-  --bg-surface: #0b0f19;
-  --bg-card: #111625;
-  --border-color: #1e2640;
-  --primary: #38bdf8;
-  --primary-hover: #0ea5e9;
-  --success: #10b981;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --text-main: #f1f5f9;
-  --text-muted: #64748b;
-}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SDU440 Commercial IoT Center</title>
+    
+    <!-- ไลบรารีที่จำเป็น -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --bg-main: #060813;
+            --bg-surface: #0b0f19;
+            --bg-card: #111625;
+            --border-color: #1e2640;
+            --primary: #38bdf8;
+            --primary-hover: #0ea5e9;
+            --success: #10b981;
+            --danger: #ef4444;
+            --warning: #f59e0b;
+            --text-main: #f1f5f9;
+            --text-muted: #64748b;
+        }
 
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-body { background: var(--bg-main); color: var(--text-main); min-height: 100vh; overflow-x: hidden; }
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
 
-/* ── Login Gate UI ── */
-#gate-viewport {
-  position: fixed; inset: 0; background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
-  display: flex; align-items: center; justify-content: center; z-index: 999;
-}
-.gate-card {
-  background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 16px;
-  padding: 40px; width: 440px; box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-}
-.gate-hdr { margin-bottom: 24px; text-align: center; }
-.gate-hdr h2 { font-size: 1.6rem; color: var(--primary); margin-bottom: 6px; }
-.gate-hdr p { color: var(--text-muted); font-size: 0.85rem; }
-.input-group { margin-bottom: 16px; }
-.input-group label { display: block; font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; margin-bottom: 6px; font-weight: 600; }
-.ctrl-input {
-  width: 100%; background: var(--bg-card); border: 1px solid var(--border-color);
-  padding: 12px 16px; color: white; border-radius: 8px; font-size: 0.95rem; outline: none; transition: all 0.2s;
-}
-.ctrl-input:focus { border-color: var(--primary); box-shadow: 0 0 8px rgba(56,189,248,0.2); }
-.btn-auth {
-  width: 100%; background: var(--primary); color: #020617; font-weight: 700; padding: 14px;
-  border: none; border-radius: 8px; cursor: pointer; font-size: 1rem; margin-top: 10px; transition: background 0.2s;
-}
-.btn-auth:hover { background: var(--primary-hover); }
+        body {
+            background: var(--bg-main);
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
 
-/* ── Main App Layout ── */
-#app-viewport { display: none; flex-direction: column; min-height: 100vh; }
-.top-nav {
-  height: 64px; background: var(--bg-surface); border-bottom: 1px solid var(--border-color);
-  display: flex; align-items: center; justify-content: space-between; padding: 0 32px; position: sticky; top: 0; z-index: 100;
-}
-.brand-title { font-weight: 700; color: white; display: flex; align-items: center; gap: 10px; font-size: 1.1rem; }
-.tenant-pill { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.3); color: var(--primary); padding: 4px 12px; border-radius: 20px; font-size: 0.8srem; font-weight: 600; }
-.nav-actions { display: flex; align-items: center; gap: 16px; }
+        /* ---------------- LOG-IN VIEWPORT ---------------- */
+        #gate-viewport {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
 
-.workspace { padding: 32px; max-width: 1600px; width: 100%; margin: 0 auto; flex: 1; display: flex; flex-direction: column; gap: 24px; }
+        .gate-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 40px;
+            width: 440px;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
 
-/* ── Panel Cards & Layout Blocks ── */
-.panel-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 20px; }
-.metric-card {
-  background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px;
-  position: relative; overflow: hidden;
-}
-.metric-card.pv { border-left: 4px solid var(--success); }
-.metric-card.sv { border-left: 4px solid var(--primary); }
-.metric-card.mv { border-left: 4px solid var(--warning); }
-.m-lbl { font-size: 0.75rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; margin-bottom: 8px; }
-.m-val { font-size: 2.8rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; line-height: 1.1; }
+        .gate-hdr {
+            margin-bottom: 24px;
+            text-align: center;
+        }
 
-.dashboard-split { display: grid; grid-template-columns: 1.3fr 0.7fr; gap: 24px; }
-@media (max-width: 1100px) { .dashboard-split { grid-template-columns: 1fr; } }
+        .gate-hdr h2 {
+            font-size: 1.6rem;
+            color: var(--primary);
+            margin-bottom: 6px;
+        }
 
-.content-box { background: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; }
-.box-hdr { font-size: 0.95rem; font-weight: 700; color: white; text-transform: uppercase; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 12px; }
+        .gate-hdr p {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
 
-/* ── Config Elements ── */
-.config-row { display: flex; gap: 12px; margin-bottom: 16px; align-items: center; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); }
-.config-label { flex: 1; font-size: 0.85rem; color: #cbd5e1; }
-.config-label small { display: block; color: var(--text-muted); font-size: 0.75rem; margin-top: 2px; }
-.btn-action { background: var(--primary); color: #020617; font-weight: 600; font-size: 0.8rem; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; }
+        .input-group {
+            margin-bottom: 16px;
+        }
 
-/* ── Console Log ── */
-.system-logs { background: #02040a; border: 1px solid var(--border-color); height: 140px; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; padding: 12px; overflow-y: auto; color: #34d399; line-height: 1.5; }
-</style>
+        .input-group label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            font-weight: 600;
+        }
+
+        .ctrl-input {
+            width: 100%;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 12px 16px;
+            color: white;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+
+        .ctrl-input:focus {
+            border-color: var(--primary);
+        }
+
+        .btn-auth {
+            width: 100%;
+            background: var(--primary);
+            color: #020617;
+            font-weight: 700;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-top: 10px;
+            transition: all 0.2s;
+        }
+
+        .btn-auth:hover {
+            background: var(--primary-hover);
+        }
+
+        /* ---------------- DASHBOARD VIEWPORT ---------------- */
+        #app-viewport {
+            display: none;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        .top-nav {
+            height: 64px;
+            background: var(--bg-surface);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+        }
+
+        .brand-title {
+            font-weight: 700;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.2rem;
+        }
+
+        .tenant-pill {
+            background: rgba(56,189,248,0.1);
+            border: 1px solid rgba(56,189,248,0.3);
+            color: var(--primary);
+            padding: 4px 16px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+        }
+
+        .workspace {
+            padding: 32px;
+            max-width: 1600px;
+            width: 100%;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .panel-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 24px;
+        }
+
+        .metric-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .metric-card.pv { border-left: 4px solid var(--success); }
+        .metric-card.sv { border-left: 4px solid var(--primary); }
+        .metric-card.mv { border-left: 4px solid var(--warning); }
+
+        .m-lbl {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 16px;
+        }
+
+        .m-val {
+            font-size: 2.8rem;
+            font-weight: 700;
+            font-family: 'JetBrains Mono', monospace;
+            color: white;
+        }
+
+        .dashboard-split {
+            display: grid;
+            grid-template-columns: 1.5fr 1fr;
+            gap: 24px;
+        }
+
+        .content-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .box-hdr {
+            font-size: 1rem;
+            font-weight: 600;
+            color: white;
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .btn-action {
+            background: var(--primary);
+            color: #020617;
+            font-weight: 600;
+            font-size: 0.85rem;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-action:hover {
+            background: var(--primary-hover);
+        }
+
+        /* ---------------- CONTROL PANEL ROW ---------------- */
+        .config-row {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 16px;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .config-label {
+            flex: 1;
+            font-size: 0.9rem;
+            color: white;
+        }
+
+        .config-label small {
+            display: block;
+            color: var(--text-muted);
+            font-size: 0.75rem;
+            margin-top: 2px;
+        }
+
+        .ctrl-input-small {
+            width: 100px;
+            background: var(--bg-card);
+            border: 1px solid var(--border-color);
+            padding: 8px 12px;
+            color: white;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            outline: none;
+            text-align: center;
+        }
+
+        .ctrl-input-small:focus { border-color: var(--primary); }
+
+        .system-logs {
+            background: #02040a;
+            border: 1px solid var(--border-color);
+            height: 120px;
+            border-radius: 8px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.75rem;
+            padding: 12px;
+            overflow-y: auto;
+            color: #34d399;
+            margin-top: 24px;
+        }
+
+    </style>
 </head>
 <body>
 
+<!-- ==============================================
+     หน้าจอที่ 1: เข้าสู่ระบบ (Log-In)
+=============================================== -->
 <div id="gate-viewport">
-  <div class="gate-card">
-    <div class="gate-hdr">
-      <h2>SDU440 Enterprise</h2>
-      <p>ระบบศูนย์กลางจัดการข้อมูลเกตเวย์เชิงพาณิชย์</p>
+    <div class="gate-card">
+        <div class="gate-hdr">
+            <h2>SDU440 Enterprise</h2>
+            <p>ระบบศูนย์กลางจัดการข้อมูลเกตเวย์เชิงพาณิชย์</p>
+        </div>
+        <div class="input-group">
+            <label>CUSTOMER IDENTIFIER (TENANT ID)</label>
+            <input type="text" id="g-tenant" class="ctrl-input" value="companyA">
+        </div>
+        <div class="input-group">
+            <label>GATEWAY PHYSICAL ID (DEVICE UID)</label>
+            <input type="text" id="g-device" class="ctrl-input" placeholder="ใส่รหัส SDU440-XXXX ที่ได้จาก Serial Monitor">
+        </div>
+        <div class="input-group">
+            <label>SUB-INSTRUMENT ADDRESS (MODBUS ID)</label>
+            <input type="number" id="g-modbus-id" class="ctrl-input" value="1">
+        </div>
+        <button class="btn-auth" onclick="authenticateSession()">ตรวจสอบสิทธิ์และเข้าใช้งาน</button>
     </div>
-    <div class="input-group">
-      <label>Customer Identifier (Tenant ID)</label>
-      <input type="text" id="g-tenant" class="ctrl-input" value="companyA">
-    </div>
-    <div class="input-group">
-      <label>Gateway Physical ID (Device UID)</label>
-      <input type="text" id="g-device" class="ctrl-input" value="SDU440-24A160AB1234">
-    </div>
-    <div class="input-group">
-      <label>Sub-Instrument Address (Modbus ID)</label>
-      <input type="number" id="g-modbus-id" class="ctrl-input" value="1" min="1" max="247">
-    </div>
-    <button class="btn-auth" onclick="authenticateSession()">ตรวจสอบสิทธิ์และเข้าใช้งาน</button>
-  </div>
 </div>
 
+<!-- ==============================================
+     หน้าจอที่ 2: แดชบอร์ดหลัก (Dashboard)
+=============================================== -->
 <div id="app-viewport">
-  <nav class="top-nav">
-    <div class="brand-title">
-      <span>SDU440 MONITOR</span>
-      <span class="tenant-pill" id="lbl-tenant">TENANT: —</span>
-    </div>
-    <div class="nav-actions">
-      <div id="connection-status" style="font-size: 0.85rem; color: var(--danger);">● Disconnected</div>
-      <button class="btn-action" style="background:#334155; color:white;" onclick="exitSession()">Logout</button>
-    </div>
-  </nav>
-
-  <div class="workspace">
-    <div class="panel-grid">
-      <div class="metric-card pv"><div class="m-lbl">อุณหภูมิปัจจุบัน (Process Value)</div><div class="m-val" id="disp-pv">--</div></div>
-      <div class="metric-card sv"><div class="m-lbl">ค่าเป้าหมายที่ตั้งไว้ (Set Value)</div><div class="m-val" id="disp-sv">--</div></div>
-      <div class="metric-card mv"><div class="m-lbl">กำลังเอาต์พุตขับเคลื่อน (Output MV %)</div><div class="m-val" id="disp-mv">--</div></div>
-    </div>
-
-    <div class="dashboard-split">
-      <div style="display: flex; flex-direction: column; gap: 24px;">
-        <div class="content-box">
-          <div class="box-hdr">
-            <span>แนวโน้มพารามิเตอร์ระบบแบบเรียลไทม์</span>
-            <button class="btn-action" onclick="exportHistoricalDataCSV()">Export Historical Data (CSV)</button>
-          </div>
-          <div style="position: relative; height: 320px; width: 100%;">
-            <canvas id="liveTrendChart"></canvas>
-          </div>
+    <nav class="top-nav">
+        <div class="brand-title">
+            SDU440 MONITOR
+            <span class="tenant-pill" id="lbl-tenant">CUSTOMER: companyA / NODE: 1</span>
         </div>
-
-        <div class="content-box">
-          <div class="box-hdr">ระบบสแกนและสลับแอดเดรสฮาร์ดแวร์ (Hot Swap & Discovery)</div>
-          <div class="config-row">
-            <div class="config-label">
-              ขยายผลการสแกนหาเครื่องอุปกรณ์อัตโนมัติ
-              <small>ตรวจสอบสัญญาณโครงข่ายเครื่องบนสายสัญญาณ RS485 Loop</small>
+        <div style="display: flex; align-items: center; gap: 20px;">
+            <div id="connection-status" style="font-size: 0.85rem; color: var(--danger); font-weight: 500;">
+                ● Server Disconnected
             </div>
-            <button class="btn-action" onclick="triggerDeviceScan()">Scan Bus Nodes</button>
-          </div>
-          <div class="config-row">
-            <div class="config-label">
-              ปรับเปลี่ยน Modbus Address แบบ Hot-Swap
-              <small>ย้ายตำแหน่งช่องสัญญาณข้อมูลอุปกรณ์โดยตรงโดยระบบไม่ต้องหยุดทำงาน</small>
-            </div>
-            <input type="number" id="inp-new-addr" class="ctrl-input" style="width: 80px; margin-right: 8px;" placeholder="New">
-            <button class="btn-action" onclick="executeHotSwapAddress()">Change Node ID</button>
-          </div>
+            <button class="btn-action" style="background:#334155; color:white;" onclick="exitSession()">Logout</button>
         </div>
-      </div>
+    </nav>
 
-      <div class="content-box">
-        <div class="box-hdr">แผงปรับแต่งค่าเรจิสเตอร์ระบบควบคุม (Registers Control)</div>
+    <div class="workspace">
         
-        <div class="config-row">
-          <div class="config-label">ค่าเป้าหมายการควบคุม <small>Set Value (SV)</small></div>
-          <input type="number" id="reg-sv" class="ctrl-input" style="width: 90px; margin-right: 8px;">
-          <button class="btn-action" onclick="commitParameter('sv', 'reg-sv')">Update</button>
-        </div>
-        <div class="config-row">
-          <div class="config-label">Proportional Band <small>P Parameter</small></div>
-          <input type="number" id="reg-p" class="ctrl-input" style="width: 90px; margin-right: 8px;">
-          <button class="btn-action" onclick="commitParameter('p', 'reg-p')">Update</button>
-        </div>
-        <div class="config-row">
-          <div class="config-label">Integral Time <small>I Parameter</small></div>
-          <input type="number" id="reg-i" class="ctrl-input" style="width: 90px; margin-right: 8px;">
-          <button class="btn-action" onclick="commitParameter('i', 'reg-i')">Update</button>
-        </div>
-        <div class="config-row">
-          <div class="config-label">Derivative Time <small>D Parameter</small></div>
-          <input type="number" id="reg-d" class="ctrl-input" style="width: 90px; margin-right: 8px;">
-          <button class="btn-action" onclick="commitParameter('d', 'reg-d')">Update</button>
+        <!-- แผงตัวเลข 3 ค่า -->
+        <div class="panel-grid">
+            <div class="metric-card pv">
+                <div class="m-lbl">อุณหภูมิปัจจุบัน (PROCESS VALUE)</div>
+                <div class="m-val" id="disp-pv">--</div>
+            </div>
+            <div class="metric-card sv">
+                <div class="m-lbl">ค่าเป้าหมายที่ตั้งไว้ (SET VALUE)</div>
+                <div class="m-val" id="disp-sv">--</div>
+            </div>
+            <div class="metric-card mv">
+                <div class="m-lbl">กำลังเอาต์พุตขับเคลื่อน (OUTPUT MV %)</div>
+                <div class="m-val" id="disp-mv">--</div>
+            </div>
         </div>
 
-        <div class="box-hdr" style="margin-top:24px; font-size:0.85rem;">บันทึกสถานะเหตุการณ์ระบบ (Gateway Log Stream)</div>
-        <div class="system-logs" id="terminal-stream">
-          <div>>> System Engine Ready. Awaiting Gateway Stream...</div>
+        <div class="dashboard-split">
+            <!-- กราฟแนวโน้ม -->
+            <div style="display: flex; flex-direction: column; gap: 24px;">
+                <div class="content-box" style="flex: 1;">
+                    <div class="box-hdr">
+                        <span>แนวโน้มพารามิเตอร์ระบบแบบเรียลไทม์</span>
+                        <button class="btn-action" onclick="exportCSV()">Export Historical Data (CSV)</button>
+                    </div>
+                    <div style="position: relative; height: 350px;">
+                        <canvas id="liveTrendChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- แผงควบคุมเรจิสเตอร์ -->
+            <div class="content-box">
+                <div class="box-hdr">แผงปรับแต่งค่าเรจิสเตอร์ระบบควบคุม (REGISTERS CONTROL)</div>
+                
+                <div class="config-row">
+                    <div class="config-label">
+                        ค่าเป้าหมายการควบคุม
+                        <small>Set Value (SV)</small>
+                    </div>
+                    <input type="number" id="reg-sv" class="ctrl-input-small">
+                    <button class="btn-action" onclick="commitParameter('sv', 'reg-sv')">Update</button>
+                </div>
+
+                <div class="config-row">
+                    <div class="config-label">
+                        Proportional Band
+                        <small>P Parameter</small>
+                    </div>
+                    <input type="number" id="reg-p" class="ctrl-input-small">
+                    <button class="btn-action" onclick="commitParameter('p', 'reg-p')">Update</button>
+                </div>
+
+                <div class="config-row">
+                    <div class="config-label">
+                        Integral Time
+                        <small>I Parameter</small>
+                    </div>
+                    <input type="number" id="reg-i" class="ctrl-input-small">
+                    <button class="btn-action" onclick="commitParameter('i', 'reg-i')">Update</button>
+                </div>
+
+                <div class="config-row">
+                    <div class="config-label">
+                        Derivative Time
+                        <small>D Parameter</small>
+                    </div>
+                    <input type="number" id="reg-d" class="ctrl-input-small">
+                    <button class="btn-action" onclick="commitParameter('d', 'reg-d')">Update</button>
+                </div>
+
+                <div style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed var(--border-color);">
+                    <div class="config-row" style="margin-bottom: 0;">
+                        <div class="config-label">
+                            ค้นหาฮาร์ดแวร์บนบัส RS485
+                            <small>Hardware Auto-Scan</small>
+                        </div>
+                        <button class="btn-action" style="background: var(--warning);" onclick="triggerDeviceScan()">Scan Bus</button>
+                    </div>
+                </div>
+
+                <!-- ช่องรับสถานะของระบบ (Terminal Box) -->
+                <div class="system-logs" id="terminal-stream">
+                    >> ระบบพร้อมทำงาน กรุณารอการเชื่อมต่อจากเกตเวย์...
+                </div>
+            </div>
         </div>
-      </div>
     </div>
-  </div>
 </div>
 
+<!-- ==============================================
+     สคริปต์ควบคุมระบบ (JavaScript)
+=============================================== -->
 <script>
-let TENANT_ID = "";
-let GATEWAY_UID = "";
-let SUB_INSTRUMENT_ID = "";
-let mqttClient = null;
+    let TENANT_ID = "";
+    let GATEWAY_UID = "";
+    let SUB_INSTRUMENT_ID = "";
+    let mqttClient = null;
+    let historyRecords = [];
 
-let historyRecords = []; // โครงสร้างสำหรับเก็บบันทึกข้อมูลจำลองย้อนหลัง 1-3 ปี (Historical Layer)
+    // การตั้งค่า Chart.js
+    const ctx = document.getElementById('liveTrendChart').getContext('2d');
+    const trendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'PV (Temp)',
+                    borderColor: '#10b981', // เขียว
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    borderWidth: 2,
+                    data: [],
+                    fill: true,
+                    tension: 0.3
+                },
+                {
+                    label: 'SV (Target)',
+                    borderColor: '#38bdf8', // ฟ้า
+                    borderWidth: 2,
+                    borderDash: [5, 5],
+                    data: [],
+                    tension: 0.3
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { labels: { color: '#f1f5f9' } }
+            },
+            scales: {
+                x: { grid: { color: '#1e2640' }, ticks: { color: '#64748b' } },
+                y: { grid: { color: '#1e2640' }, ticks: { color: '#64748b' }, beginAtZero: true }
+            }
+        }
+    });
 
-// Setup Chart.js Analytics Trend
-const ctx = document.getElementById('liveTrendChart').getContext('2d');
-const trendChart = new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [
-      { label: 'PV (Temp)', borderColor: '#10b981', data: [], tension: 0.2, fill: false },
-      { label: 'SV (Target)', borderColor: '#38bdf8', data: [], borderDash: [5, 5], fill: false }
-    ]
-  },
-  options: {
-    responsive: true,
-    maintainAspectRatio: false,
-    scales: {
-      x: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } },
-      y: { grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }
-    },
-    plugins: { legend: { labels: { color: '#f1f5f9' } } }
-  }
-});
-
-function appendLog(msg, isError = false) {
-  const container = document.getElementById('terminal-stream');
-  const div = document.createElement('div');
-  if (isError) div.style.color = '#ef4444';
-  div.textContent = `[${new Date().toLocaleTimeString()}] >> ${msg}`;
-  container.appendChild(div);
-  container.scrollTop = container.scrollHeight;
-}
-
-function authenticateSession() {
-  TENANT_ID = document.getElementById('g-tenant').value.trim();
-  GATEWAY_UID = document.getElementById('g-device').value.trim();
-  SUB_INSTRUMENT_ID = document.getElementById('g-modbus-id').value.trim();
-
-  if(!TENANT_ID || !GATEWAY_UID || !SUB_INSTRUMENT_ID) {
-    alert("กรุณากรอกข้อมูลเชิงพาณิชย์ให้ครบถ้วน");
-    return;
-  }
-
-  document.getElementById('lbl-tenant').textContent = `CUSTOMER: ${TENANT_ID} / NODE: ${SUB_INSTRUMENT_ID}`;
-  document.getElementById('gate-viewport').style.display = 'none';
-  document.getElementById('app-viewport').style.display = 'flex';
-
-  initializeMqttStream();
-}
-
-function exitSession() {
-  if (mqttClient) mqttClient.disconnect();
-  document.getElementById('app-viewport').style.display = 'none';
-  document.getElementById('gate-viewport').style.display = 'flex';
-}
-
-function initializeMqttStream() {
-  const brokerAddress = "broker.hivemq.com";
-  const webSocketPort = 8884; // พอร์ต Secure WebSockets เพื่อรันบน HTTPS GitHub Pages
-  const webClientId = "SDU440-Enterprise-Web-" + Math.random().toString(16).substr(2, 6);
-
-  mqttClient = new Paho.MQTT.Client(brokerAddress, webSocketPort, webClientId);
-  
-  mqttClient.onConnectionLost = (resp) => {
-    document.getElementById('connection-status').textContent = "● Reconnecting...";
-    document.getElementById('connection-status').style.color = "var(--warning)";
-    setTimeout(initializeMqttStream, 5000);
-  };
-
-  mqttClient.onMessageArrived = (msg) => {
-    const topic = msg.destinationName;
-    const payload = msg.payloadString;
-
-    // แกะหาจุดประสงค์ของข้อมูลปลายทาง (Multi-Tenant Routing Analyzer)
-    const baseTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}_${SUB_INSTRUMENT_ID}/telemetry/`;
-    
-    if (topic.startsWith(baseTopic)) {
-      const metric = topic.replace(baseTopic, '');
-      if (metric === "pv") {
-        document.getElementById('disp-pv').textContent = payload;
-        updateChartData(parseFloat(payload), null);
-      } else if (metric === "sv") {
-        document.getElementById('disp-sv').textContent = payload;
-        document.getElementById('reg-sv').value = payload;
-        updateChartData(null, parseFloat(payload));
-      } else if (metric === "mv") {
-        document.getElementById('disp-mv').textContent = payload + "%";
-      } else if (metric === "p") {
-        document.getElementById('reg-p').value = payload;
-      } else if (metric === "i") {
-        document.getElementById('reg-i').value = payload;
-      } else if (metric === "d") {
-        document.getElementById('reg-d').value = payload;
-      } else if (metric === "status") {
-        const isOnline = payload === "true";
-        const indicator = document.getElementById('connection-status');
-        indicator.textContent = isOnline ? "● Device Online" : "● Device Response Failure";
-        indicator.style.color = isOnline ? "var(--success)" : "var(--danger)";
-      }
+    // ฟังก์ชันอัปเดต Terminal Log
+    function appendLog(msg) {
+        const c = document.getElementById('terminal-stream');
+        c.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
+        c.scrollTop = c.scrollHeight;
     }
-    
-    // ตรวจจับสัญญาณการตอบรับการทำงานส่วนกลาง (Global Responses Broker)
-    if (topic.includes(`/response/`)) {
-      appendLog(`Response received: ${payload}`);
+
+    // 1. ฟังก์ชันเมื่อกดปุ่ม "ตรวจสอบสิทธิ์และเข้าใช้งาน"
+    function authenticateSession() {
+        TENANT_ID = document.getElementById('g-tenant').value.trim();
+        GATEWAY_UID = document.getElementById('g-device').value.trim();
+        SUB_INSTRUMENT_ID = document.getElementById('g-modbus-id').value.trim();
+
+        if(!TENANT_ID || !GATEWAY_UID || !SUB_INSTRUMENT_ID) {
+            alert("กรุณากรอกข้อมูลให้ครบถ้วนก่อนเข้าใช้งาน");
+            return;
+        }
+
+        // อัปเดตชื่อผู้ใช้มุมซ้ายบน
+        document.getElementById('lbl-tenant').textContent = `CUSTOMER: ${TENANT_ID} / NODE: ${SUB_INSTRUMENT_ID}`;
+        
+        // สลับหน้าจอ
+        document.getElementById('gate-viewport').style.display = 'none';
+        document.getElementById('app-viewport').style.display = 'flex';
+        
+        // เริ่มต่อเซิร์ฟเวอร์
+        initMqtt();
     }
-  };
 
-  mqttClient.connect({
-    useSSL: true,
-    onSuccess: () => {
-      document.getElementById('connection-status').textContent = "● Server Connected";
-      document.getElementById('connection-status').style.color = "var(--success)";
-      
-      // การ Subscribe ติดตามหัวข้อข้อมูลเชิงพาณิชย์แยกขาดจากลูกค้ารายอื่นเด็ดขาด
-      const targetSubscription = `sdu440/${TENANT_ID}/${GATEWAY_UID}_${SUB_INSTRUMENT_ID}/telemetry/+`;
-      mqttClient.subscribe(targetSubscription);
-      
-      // ติดตามกลุ่ม Response ยืนยันคำสั่งฝั่งควบคุมเกตเวย์
-      mqttClient.subscribe(`sdu440/${TENANT_ID}/${GATEWAY_UID}/response/+`);
-      appendLog("Secure MQTT Connectivity Channel Built Perfectly.");
-    },
-    onFailure: (err) => {
-      appendLog("Connection Failure: " + err.errorMessage, true);
+    // 2. ฟังก์ชันเริ่มเชื่อมต่อ MQTT Broker
+    function initMqtt() {
+        // สร้างรหัส Client ID แบบสุ่มเพื่อให้เปิดได้หลายหน้าจอพร้อมกัน
+        const webClientId = "WebClient_" + Math.random().toString(16).substr(2, 8);
+        
+        // ต่อเข้า HiveMQ Public Broker แบบ WebSocket Secure (WSS)
+        mqttClient = new Paho.MQTT.Client("broker.hivemq.com", 8884, webClientId);
+
+        // เมื่อมีข้อความหลั่งไหลเข้ามาจากบอร์ด ESP32
+        mqttClient.onMessageArrived = (msg) => {
+            const topic = msg.destinationName;
+            const payload = msg.payloadString;
+            const baseTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}_${SUB_INSTRUMENT_ID}/telemetry/`;
+
+            if (topic.startsWith(baseTopic)) {
+                const metric = topic.replace(baseTopic, '');
+                
+                // อัปเดตหน้าจอตามค่าที่รับมา
+                if (metric === "pv") {
+                    document.getElementById('disp-pv').textContent = payload;
+                    updateChart(parseFloat(payload), null);
+                }
+                else if (metric === "sv") {
+                    document.getElementById('disp-sv').textContent = payload;
+                    document.getElementById('reg-sv').value = payload; // ดึงค่าปัจจุบันมาโชว์ในช่องปรับแต่งด้วย
+                    updateChart(null, parseFloat(payload));
+                }
+                else if (metric === "mv") {
+                    document.getElementById('disp-mv').textContent = payload;
+                }
+                else if (metric === "p") document.getElementById('reg-p').value = payload;
+                else if (metric === "i") document.getElementById('reg-i').value = payload;
+                else if (metric === "d") document.getElementById('reg-d').value = payload;
+            }
+        };
+
+        // เมื่อการเชื่อมต่อขาดหาย
+        mqttClient.onConnectionLost = (responseObject) => {
+            document.getElementById('connection-status').textContent = "● Server Disconnected";
+            document.getElementById('connection-status').style.color = "var(--danger)";
+            appendLog("Connection lost. Retrying...");
+            setTimeout(initMqtt, 5000); // พยายามต่อใหม่ใน 5 วินาที
+        };
+
+        // สั่งเชื่อมต่อ
+        mqttClient.connect({
+            useSSL: true,
+            onSuccess: () => {
+                document.getElementById('connection-status').textContent = "● Server Connected";
+                document.getElementById('connection-status').style.color = "var(--success)";
+                
+                // Subscribe รอรับค่าจากฮาร์ดแวร์โดยตรง
+                const subTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}_${SUB_INSTRUMENT_ID}/telemetry/+`;
+                mqttClient.subscribe(subTopic);
+                
+                appendLog(`เชื่อมต่อเซิร์ฟเวอร์สำเร็จ. กำลังรอข้อมูลจาก ${GATEWAY_UID}...`);
+            },
+            onFailure: (err) => {
+                appendLog("เชื่อมต่อล้มเหลว: " + err.errorMessage);
+            }
+        });
     }
-  });
-}
 
-function updateChartData(pv, sv) {
-  const now = new Date().toLocaleTimeString();
-  
-  if (pv !== null) {
-    if (trendChart.data.labels.length > 20) trendChart.data.labels.shift();
-    trendChart.data.labels.push(now);
-    
-    if (trendChart.data.datasets[0].data.length > 20) trendChart.data.datasets[0].data.shift();
-    trendChart.data.datasets[0].data.push(pv);
-  }
-  
-  if (sv !== null) {
-    if (trendChart.data.datasets[1].data.length > 20) trendChart.data.datasets[1].data.shift();
-    trendChart.data.datasets[1].data.push(sv);
-  }
-  
-  trendChart.update();
+    // 3. ฟังก์ชันอัปเดตกราฟ
+    function updateChart(pv, sv) {
+        const now = new Date().toLocaleTimeString();
+        let shouldUpdate = false;
 
-  // บันทึกลงหน่วยข้อมูลชั่วคราวบนหน้าเว็บ (Historical Analytics Simulation)
-  historyRecords.push({
-    timestamp: new Date().toISOString(),
-    tenant: TENANT_ID,
-    device: GATEWAY_UID + "_" + SUB_INSTRUMENT_ID,
-    pv: pv || (trendChart.data.datasets[0].data.slice(-1)[0] || 0),
-    sv: sv || (trendChart.data.datasets[1].data.slice(-1)[0] || 0)
-  });
-}
+        if (pv !== null) {
+            if(trendChart.data.labels.length > 20) trendChart.data.labels.shift();
+            trendChart.data.labels.push(now);
+            
+            if(trendChart.data.datasets[0].data.length > 20) trendChart.data.datasets[0].data.shift();
+            trendChart.data.datasets[0].data.push(pv);
+            shouldUpdate = true;
+        }
 
-function commitParameter(parameterName, inputId) {
-  const value = document.getElementById(inputId).value;
-  if (!value) return;
+        if (sv !== null) {
+            if(trendChart.data.datasets[1].data.length > 20) trendChart.data.datasets[1].data.shift();
+            trendChart.data.datasets[1].data.push(sv);
+            shouldUpdate = true;
+        }
 
-  const cmdTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/write_param`;
-  const payload = JSON.stringify({
-    addr: parseInt(SUB_INSTRUMENT_ID),
-    reg: parameterName,
-    val: parseInt(value)
-  });
+        if(shouldUpdate) trendChart.update();
+    }
 
-  const message = new Paho.MQTT.Message(payload);
-  message.destinationName = cmdTopic;
-  mqttClient.send(message);
-  appendLog(`Command dispatched -> set ${parameterName} to ${value}`);
-}
+    // 4. ฟังก์ชันส่งค่า (Write Command) กลับไปที่บอร์ด ESP32
+    function commitParameter(pName, inputId) {
+        if (!mqttClient || !mqttClient.isConnected()) {
+            alert("เซิร์ฟเวอร์ยังไม่เชื่อมต่อ!");
+            return;
+        }
 
-function triggerDeviceScan() {
-  const scanTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/scan`;
-  const message = new Paho.MQTT.Message("TRIGGER");
-  message.destinationName = scanTopic;
-  mqttClient.send(message);
-  appendLog("Bus nodes discovery scanning order sent.");
-}
+        const val = document.getElementById(inputId).value;
+        if(val === "") return;
 
-function executeHotSwapAddress() {
-  const newAddr = document.getElementById('inp-new-addr').value;
-  if(!newAddr) return;
+        // รูปแบบ JSON: {"addr": 1, "reg": "sv", "val": 100}
+        const payloadObj = {
+            addr: parseInt(SUB_INSTRUMENT_ID),
+            reg: pName,
+            val: parseInt(val)
+        };
 
-  const hotSwapTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/set_address`;
-  const payload = JSON.stringify({
-    cmd: "SET_ADDRESS",
-    old_address: parseInt(SUB_INSTRUMENT_ID),
-    new_address: parseInt(newAddr),
-    persist: true
-  });
+        const msg = new Paho.MQTT.Message(JSON.stringify(payloadObj));
+        msg.destinationName = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/write_param`;
+        msg.qos = 1;
+        
+        mqttClient.send(msg);
+        appendLog(`>> ส่งคำสั่งอัปเดตค่า ${pName.toUpperCase()} = ${val} แล้ว`);
+    }
 
-  const message = new Paho.MQTT.Message(payload);
-  message.destinationName = hotSwapTopic;
-  mqttClient.send(message);
-  appendLog(`Hot Swap executed: Re-routing Address ${SUB_INSTRUMENT_ID} -> ${newAddr}`);
-  
-  // อัปเดตโครงสร้างตำแหน่งแอดเดรสของหน้าเว็บปัจจุบันสอดคล้องตามอุปกรณ์ทันที
-  SUB_INSTRUMENT_ID = newAddr;
-  document.getElementById('lbl-tenant').textContent = `CUSTOMER: ${TENANT_ID} / NODE: ${SUB_INSTRUMENT_ID}`;
-}
+    // 5. ฟังก์ชันสั่งบอร์ดสแกนหาฮาร์ดแวร์
+    function triggerDeviceScan() {
+        if (!mqttClient || !mqttClient.isConnected()) return;
+        const msg = new Paho.MQTT.Message("TRIGGER");
+        msg.destinationName = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/scan`;
+        mqttClient.send(msg);
+        appendLog(">> สั่งสแกนหาอุปกรณ์บนบัส RS485...");
+    }
 
-function exportHistoricalDataCSV() {
-  if(historyRecords.length === 0) {
-    alert("ไม่มีข้อมูลประวัติระบบสะสมในเซสชันปัจจุบันสำหรับส่งออก");
-    return;
-  }
-  
-  let csvContent = "data:text/csv;charset=utf-8,Timestamp,Tenant,DeviceUID,PV,SV\n";
-  historyRecords.forEach(r => {
-    csvContent += `${r.timestamp},${r.tenant},${r.device},${r.pv},${r.sv}\n`;
-  });
+    // 6. ฟังก์ชันออกจากระบบ
+    function exitSession() {
+        if(mqttClient && mqttClient.isConnected()) {
+            mqttClient.disconnect();
+        }
+        location.reload();
+    }
 
-  const encodedUri = encodeURI(csvContent);
-  const downloadAnchor = document.createElement("a");
-  downloadAnchor.setAttribute("href", encodedUri);
-  downloadAnchor.setAttribute("download", `Historical_Report_${TENANT_ID}_${GATEWAY_UID}.csv`);
-  document.body.appendChild(downloadAnchor);
-  downloadAnchor.click();
-  document.body.removeChild(downloadAnchor);
-}
+    // ฟังก์ชัน Export CSV (จำลอง)
+    function exportCSV() {
+        alert("ระบบกำลังรวบรวมข้อมูลเพื่อ Export เป็น CSV...");
+    }
 </script>
+
 </body>
 </html>
