@@ -1,688 +1,451 @@
-<!DOCTYPE html>
-<html lang="th">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SDU440 Control Center</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Prompt:wght@300;400;500;700&display=swap" rel="stylesheet">
-<style>
-/* ── TOKENS ── */
-:root{
-  --bg:#07090f; --surface:#0d1117; --card:#111827;
-  --border:#1f2937; --border2:#374151;
-  --text:#e2e8f0; --muted:#6b7280;
-  --accent:#38bdf8; --accent2:#0ea5e9;
-  --success:#4ade80; --danger:#f87171; --warn:#fbbf24; --purple:#a78bfa;
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'Prompt',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+import { useState, useEffect, useCallback, useRef } from "react";
 
-/* ── LOGIN SCREEN ── */
-#login-screen{
-  display:flex;align-items:center;justify-content:center;
-  min-height:100vh;padding:20px;
-}
-.login-card{
-  background:var(--card);border:1px solid var(--border);border-radius:16px;
-  padding:36px;width:100%;max-width:420px;
-}
-.login-logo{
-  text-align:center;margin-bottom:28px;
-}
-.login-logo h1{font-size:1.6rem;color:var(--accent);font-family:'JetBrains Mono',monospace;}
-.login-logo p{color:var(--muted);font-size:.85rem;margin-top:4px;}
-.form-row{margin-bottom:14px;}
-.form-row label{display:block;font-size:.82rem;color:#94a3b8;margin-bottom:5px;}
-.form-row input{
-  width:100%;background:var(--bg);border:1px solid var(--border2);
-  color:#fff;padding:10px 12px;border-radius:8px;font-size:.9rem;
-  font-family:'JetBrains Mono',monospace;
-}
-.form-row input:focus{outline:none;border-color:var(--accent);}
-.form-row .hint{font-size:.72rem;color:var(--muted);margin-top:3px;}
-.btn-login{
-  width:100%;background:var(--accent);color:#000;border:none;
-  padding:12px;border-radius:8px;font-size:1rem;font-weight:700;
-  cursor:pointer;margin-top:8px;font-family:'Prompt',sans-serif;
-}
-.btn-login:hover{background:var(--accent2);}
-.login-err{
-  background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);
-  color:var(--danger);border-radius:8px;padding:10px 14px;
-  font-size:.83rem;margin-top:12px;display:none;
-}
-
-/* ── APP LAYOUT ── */
-#app{display:none;}
-.layout{
-  display:grid;
-  grid-template-columns:240px 1fr;
-  grid-template-rows:54px 1fr;
-  min-height:100vh;
-}
-
-/* ── TOPBAR ── */
-.topbar{
-  grid-column:1/-1;background:var(--surface);
-  border-bottom:1px solid var(--border);
-  display:flex;align-items:center;padding:0 20px;gap:12px;
-}
-.topbar-logo{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700;color:var(--accent);}
-.topbar-logo span{color:var(--muted);font-weight:400;}
-.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
-.badge{
-  display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;
-  font-size:.75rem;font-weight:600;border:1px solid var(--border2);background:var(--card);
-}
-.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
-.badge.ok .badge-dot{background:var(--success);box-shadow:0 0 5px var(--success);}
-.badge.err .badge-dot{background:var(--danger);}
-.device-chip{
-  font-family:'JetBrains Mono',monospace;font-size:.72rem;
-  color:var(--accent);background:rgba(56,189,248,.1);
-  border:1px solid rgba(56,189,248,.25);border-radius:6px;padding:3px 9px;
-}
-.logout-btn{
-  background:none;border:1px solid var(--border2);color:var(--muted);
-  padding:4px 11px;border-radius:6px;cursor:pointer;font-size:.78rem;
-}
-.logout-btn:hover{color:var(--danger);border-color:var(--danger);}
-
-/* ── SIDEBAR ── */
-.sidebar{
-  background:var(--surface);border-right:1px solid var(--border);
-  padding:14px 10px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;
-}
-.nav-section{font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px;}
-.nav-item{
-  display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:7px;
-  cursor:pointer;font-size:.86rem;color:var(--muted);border:1px solid transparent;transition:all .15s;
-}
-.nav-item:hover{background:var(--card);color:var(--text);}
-.nav-item.active{background:rgba(56,189,248,.1);color:var(--accent);border-color:rgba(56,189,248,.2);}
-.nav-icon{width:18px;text-align:center;font-size:.95rem;}
-
-/* ── MAIN ── */
-.main{overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}
-.page{display:none;flex-direction:column;gap:16px;}
-.page.active{display:flex;}
-
-/* ── MONITOR ── */
-.monitor-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-.monitor-card{
-  background:var(--card);border:1px solid var(--border);border-radius:11px;padding:16px 18px;
-}
-.monitor-label{font-size:.73rem;color:var(--muted);margin-bottom:5px;letter-spacing:.04em;}
-.monitor-val{font-family:'JetBrains Mono',monospace;font-size:2.4rem;font-weight:700;line-height:1;}
-.monitor-unit{font-size:.78rem;color:var(--muted);margin-top:3px;}
-
-/* ── CARD ── */
-.card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:18px;}
-.card-title{
-  font-size:.87rem;font-weight:600;color:#94a3b8;
-  display:flex;align-items:center;gap:7px;
-  margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border);
-}
-
-/* ── PARAM ROW ── */
-.param-row{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:9px 13px;border-radius:7px;
-  background:var(--bg);border:1px solid var(--border);margin-bottom:7px;gap:10px;
-}
-.param-label{font-size:.84rem;color:#cbd5e1;flex:1;}
-.param-label small{display:block;font-size:.71rem;color:var(--muted);font-family:'JetBrains Mono',monospace;}
-.param-action{display:flex;align-items:center;gap:7px;flex-shrink:0;}
-.tag{
-  font-family:'JetBrains Mono',monospace;background:#1a2234;border:1px solid var(--border2);
-  padding:3px 9px;border-radius:4px;font-size:.84rem;min-width:50px;text-align:center;color:#94a3b8;
-}
-
-/* ── FORM ── */
-input[type=number],input[type=text],select{
-  background:#0d1117;border:1px solid var(--border2);color:#fff;
-  padding:6px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.84rem;
-}
-input[type=number]:focus,input[type=text]:focus,select:focus{outline:none;border-color:var(--accent);}
-input[type=number]{width:70px;text-align:center;}
-select{cursor:pointer;font-family:'Prompt',sans-serif;}
-.btn{
-  background:var(--accent);color:#000;border:none;padding:6px 13px;border-radius:6px;
-  font-weight:700;cursor:pointer;font-size:.81rem;white-space:nowrap;
-}
-.btn:hover{background:var(--accent2);}
-.btn-ghost{
-  background:none;border:1px solid var(--border2);color:var(--text);
-  padding:6px 13px;border-radius:6px;font-size:.81rem;cursor:pointer;
-}
-.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
-.btn-danger{background:var(--danger)!important;color:#000!important;}
-.btn-full{width:100%;padding:10px;font-size:.9rem;margin-top:4px;}
-
-/* ── MODBUS CONFIG ── */
-.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
-.cfg-group{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:15px;}
-.cfg-group-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:11px;}
-.cfg-row{margin-bottom:11px;}
-.cfg-row label{display:block;font-size:.79rem;color:#94a3b8;margin-bottom:4px;}
-.cfg-row input,.cfg-row select{width:100%;}
-.cfg-row .hint{font-size:.70rem;color:var(--muted);margin-top:2px;}
-.addr-display{
-  display:flex;align-items:center;gap:12px;
-  background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 15px;margin-bottom:11px;
-}
-.addr-num{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700;color:var(--accent);min-width:44px;text-align:center;}
-.addr-ok{color:var(--success);}
-.addr-err{color:var(--danger);}
-
-/* ── CHART ── */
-.chart-wrap{position:relative;height:210px;}
-
-/* ── CONSOLE ── */
-.console{
-  background:#03040a;border:1px solid var(--border);border-radius:6px;padding:10px 12px;
-  font-family:'JetBrains Mono',monospace;font-size:.77rem;height:120px;overflow-y:auto;
-  color:var(--success);line-height:1.7;
-}
-.log-err{color:var(--danger);}
-.log-info{color:var(--accent);}
-.log-warn{color:var(--warn);}
-
-/* ── ALERT ── */
-.alert{padding:9px 13px;border-radius:8px;font-size:.82rem;display:flex;align-items:center;gap:7px;border:1px solid;}
-.alert-info{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.2);color:var(--accent);}
-.alert-success{background:rgba(74,222,128,.08);border-color:rgba(74,222,128,.2);color:var(--success);}
-.alert-warn{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.2);color:var(--warn);}
-
-/* ── RESPONSIVE ── */
-@media(max-width:820px){
-  .layout{grid-template-columns:1fr;}
-  .sidebar{display:none;}
-  .monitor-row{grid-template-columns:1fr;}
-  .cfg-grid{grid-template-columns:1fr;}
-}
-</style>
-</head>
-<body>
-
-<!-- ================================================================ -->
-<!-- LOGIN SCREEN -->
-<!-- ================================================================ -->
-<div id="login-screen">
-  <div class="login-card">
-    <div class="login-logo">
-      <h1>SDU440</h1>
-      <p>IoT Control Center — เข้าสู่ระบบด้วย Device Token</p>
-    </div>
-
-    <div class="form-row">
-      <label>Device ID</label>
-      <input type="text" id="l-deviceid" placeholder="เช่น SDU-AABBCCDD">
-      <div class="hint">ดูได้จากหน้า Setup ของ ESP32 (192.168.4.1)</div>
-    </div>
-    <div class="form-row">
-      <label>Token</label>
-      <input type="text" id="l-token" placeholder="AABBCCDD-XXXXXXXX">
-      <div class="hint">Token สร้างอัตโนมัติจาก MAC Address ของบอร์ด</div>
-    </div>
-    <div class="form-row">
-      <label>Password</label>
-      <input type="password" id="l-password" placeholder="รหัสผ่านที่ตั้งไว้ตอน Setup">
-    </div>
-    <div class="form-row">
-      <label>Cloudflare Worker URL</label>
-      <input type="text" id="l-cfurl" placeholder="https://sdu440-worker.your-name.workers.dev">
-      <div class="hint">URL จาก Cloudflare Dashboard</div>
-    </div>
-
-    <button class="btn-login" onclick="doLogin()">🔐 เข้าสู่ระบบ</button>
-    <div class="login-err" id="login-err"></div>
-  </div>
-</div>
-
-<!-- ================================================================ -->
-<!-- APP -->
-<!-- ================================================================ -->
-<div id="app">
-<div class="layout">
-
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <div class="topbar-logo">SDU440 <span>/ Dashboard</span></div>
-    <div class="topbar-right">
-      <div class="device-chip" id="top-deviceid">—</div>
-      <div class="badge" id="badge-mqtt"><div class="badge-dot"></div><span id="badge-mqtt-txt">MQTT</span></div>
-      <div class="badge" id="badge-sdu"><div class="badge-dot"></div><span id="badge-sdu-txt">SDU440</span></div>
-      <button class="logout-btn" onclick="doLogout()">ออกจากระบบ</button>
-    </div>
-  </header>
-
-  <!-- SIDEBAR -->
-  <nav class="sidebar">
-    <div class="nav-section">Dashboard</div>
-    <div class="nav-item active" onclick="showPage('pg-monitor',this)"><span class="nav-icon">📊</span>Monitor</div>
-    <div class="nav-item" onclick="showPage('pg-params',this)"><span class="nav-icon">🎛️</span>Parameters</div>
-    <div class="nav-item" onclick="showPage('pg-tuning',this)"><span class="nav-icon">🛠️</span>PID Tuning</div>
-    <div class="nav-item" onclick="showPage('pg-alarm',this)"><span class="nav-icon">🔔</span>Alarm</div>
-    <div class="nav-section">System</div>
-    <div class="nav-item" onclick="showPage('pg-modbus',this)"><span class="nav-icon">🔌</span>Modbus Config</div>
-    <div class="nav-item" onclick="showPage('pg-debug',this)"><span class="nav-icon">💻</span>Debug</div>
-  </nav>
-
-  <!-- MAIN -->
-  <main class="main">
-
-    <!-- ── MONITOR ── -->
-    <div class="page active" id="pg-monitor">
-      <div class="monitor-row">
-        <div class="monitor-card"><div class="monitor-label">🔥 อุณหภูมิ (PV)</div><div class="monitor-val" id="v-pv" style="color:var(--success)">--</div><div class="monitor-unit">Process Value</div></div>
-        <div class="monitor-card"><div class="monitor-label">🎯 เป้าหมาย (SV)</div><div class="monitor-val" id="v-sv" style="color:var(--accent)">--</div><div class="monitor-unit">Set Value</div></div>
-        <div class="monitor-card"><div class="monitor-label">⚡ เอาต์พุต (MV)</div><div class="monitor-val" id="v-mv" style="color:var(--warn)">--</div><div class="monitor-unit">%</div></div>
-      </div>
-      <div class="card">
-        <div class="card-title">
-          📈 กราฟประวัติอุณหภูมิ
-          <div style="margin-left:auto;display:flex;align-items:center;gap:7px;">
-            <span style="font-size:.77rem;color:var(--muted);">Y:</span>
-            <input type="number" id="g-min" placeholder="Min" style="width:58px;">
-            <input type="number" id="g-max" placeholder="Max" style="width:58px;">
-            <button class="btn" onclick="applyScale()">SET</button>
-            <button class="btn-ghost" onclick="clearChart()">Clear</button>
-          </div>
-        </div>
-        <div class="chart-wrap"><canvas id="main-chart"></canvas></div>
-      </div>
-    </div>
-
-    <!-- ── PARAMETERS ── -->
-    <div class="page" id="pg-params">
-      <div class="card">
-        <div class="card-title">🎛️ ค่าพื้นฐาน</div>
-        <div class="param-row"><div class="param-label">Setpoint <small>(SV)</small></div><div class="param-action"><span class="tag" id="v-sv-tag">--</span><input type="number" id="i-sv"><button class="btn" onclick="cmd('sv','i-sv')">SET</button></div></div>
-        <div class="param-row"><div class="param-label">Sensor Type <small>(InPt)</small></div><div class="param-action"><span class="tag" id="v-inpt">--</span><select id="i-inpt"><option value="0">K-Type TC</option><option value="1">J-Type TC</option><option value="2">E-Type TC</option><option value="10">Pt100 (JIS)</option><option value="11">Pt100 (DIN)</option></select><button class="btn" onclick="cmd('inpt','i-inpt')">SET</button></div></div>
-        <div class="param-row"><div class="param-label">Unit <small>(UnIt)</small></div><div class="param-action"><span class="tag" id="v-unit">--</span><select id="i-unit"><option value="0">°C</option><option value="1">°F</option></select><button class="btn" onclick="cmd('unit','i-unit')">SET</button></div></div>
-        <div class="param-row"><div class="param-label">Decimal Point <small>(dP)</small></div><div class="param-action"><span class="tag" id="v-dp">--</span><select id="i-dp"><option value="0">0</option><option value="1">0.0</option><option value="2">0.00</option></select><button class="btn" onclick="cmd('dp','i-dp')">SET</button></div></div>
-        <div class="param-row">
-          <div class="param-label">Scale Hi / Lo <small>(SCH / SCL)</small></div>
-          <div class="param-action">
-            Hi:<span class="tag" id="v-sch">--</span><input type="number" id="i-sch" style="width:58px;"><button class="btn" onclick="cmd('sch','i-sch')">SET</button>
-            Lo:<span class="tag" id="v-scl">--</span><input type="number" id="i-scl" style="width:58px;"><button class="btn" onclick="cmd('scl','i-scl')">SET</button>
-          </div>
-        </div>
-        <div class="param-row"><div class="param-label">Control Action <small>(CACt)</small></div><div class="param-action"><span class="tag" id="v-cact">--</span><select id="i-cact"><option value="0">Reverse (ควบคุมร้อน)</option><option value="1">Direct (ควบคุมเย็น)</option></select><button class="btn" onclick="cmd('cact','i-cact')">SET</button></div></div>
-      </div>
-    </div>
-
-    <!-- ── PID TUNING ── -->
-    <div class="page" id="pg-tuning">
-      <div class="card">
-        <div class="card-title">🛠️ PID Parameters</div>
-        <div class="param-row"><div class="param-label">Proportional Band <small>(P)</small></div><div class="param-action"><span class="tag" id="v-p">--</span><input type="number" id="i-p"><button class="btn" onclick="cmd('p','i-p')">SET</button></div></div>
-        <div class="param-row"><div class="param-label">Integral Time <small>(I)</small></div><div class="param-action"><span class="tag" id="v-i">--</span><input type="number" id="i-i"><button class="btn" onclick="cmd('i','i-i')">SET</button></div></div>
-        <div class="param-row"><div class="param-label">Derivative Time <small>(D)</small></div><div class="param-action"><span class="tag" id="v-d">--</span><input type="number" id="i-d"><button class="btn" onclick="cmd('d','i-d')">SET</button></div></div>
-        <div class="param-row"><div class="param-label">Hysteresis <small>(HyS)</small></div><div class="param-action"><span class="tag" id="v-hys">--</span><input type="number" id="i-hys"><button class="btn" onclick="cmd('hys','i-hys')">SET</button></div></div>
-        <div class="param-row"><div class="param-label">Cycle Time <small>(CP)</small></div><div class="param-action"><span class="tag" id="v-cp">--</span><input type="number" id="i-cp"><button class="btn" onclick="cmd('cp','i-cp')">SET</button></div></div>
-        <div class="param-row"><div class="param-label">Timer <small>(tIm)</small></div><div class="param-action"><span class="tag" id="v-tim">--</span><input type="number" id="i-tim"><button class="btn" onclick="cmd('tim','i-tim')">SET</button></div></div>
-        <div class="param-row"><div class="param-label">Auto-Tuning <small>(AT)</small></div><div class="param-action"><span class="tag" id="v-at">--</span><select id="i-at"><option value="0">Stop</option><option value="1">Start AT</option></select><button class="btn" onclick="cmd('at','i-at')">SET</button></div></div>
-      </div>
-    </div>
-
-    <!-- ── ALARM ── -->
-    <div class="page" id="pg-alarm">
-      <div class="card">
-        <div class="card-title">🔔 Alarm Settings</div>
-        <div class="param-row" style="border-left:3px solid var(--danger);">
-          <div class="param-label">Alarm 1 Mode <small>(ALS1)</small></div>
-          <div class="param-action"><span class="tag" id="v-als1" style="min-width:70px;font-size:.78rem;">--</span>
-            <select id="i-als1"><option value="0">Off</option><option value="1">High</option><option value="2">Standby Hi</option><option value="3">Low</option><option value="4">Standby Lo</option><option value="5">Dev Hi</option><option value="6">Dev Lo</option><option value="7">Deviation</option></select>
-            <button class="btn" onclick="cmd('als1','i-als1')">SET</button></div>
-        </div>
-        <div class="param-row"><div class="param-label">Alarm 1 Value <small>(HyS1)</small></div><div class="param-action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button class="btn" onclick="cmd('hys1','i-hys1')">SET</button></div></div>
-        <div class="param-row" style="border-left:3px solid var(--warn);">
-          <div class="param-label">Alarm 2 Mode <small>(ALS2)</small></div>
-          <div class="param-action"><span class="tag" id="v-als2" style="min-width:70px;font-size:.78rem;">--</span>
-            <select id="i-als2"><option value="0">Off</option><option value="1">High</option><option value="2">Standby Hi</option><option value="3">Low</option><option value="4">Standby Lo</option><option value="5">Dev Hi</option><option value="6">Dev Lo</option><option value="7">Deviation</option></select>
-            <button class="btn" onclick="cmd('als2','i-als2')">SET</button></div>
-        </div>
-        <div class="param-row"><div class="param-label">Alarm 2 Value <small>(HyS2)</small></div><div class="param-action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button class="btn" onclick="cmd('hys2','i-hys2')">SET</button></div></div>
-      </div>
-    </div>
-
-    <!-- ── MODBUS CONFIG ── -->
-    <div class="page" id="pg-modbus">
-      <div class="alert alert-info">💡 ESP32 จะ Hot Swap Address และยืนยันก่อนบันทึก — Rollback อัตโนมัติถ้าไม่ตอบสนอง</div>
-
-      <div class="card">
-        <div class="card-title">🔌 สถานะ Modbus</div>
-        <div class="addr-display">
-          <div class="addr-num" id="disp-addr">--</div>
-          <div style="flex:1;"><div style="font-size:.73rem;color:var(--muted);">Modbus Address</div><div id="disp-addr-status" style="font-size:.85rem;">รอข้อมูล...</div></div>
-          <div class="tag" id="disp-mode" style="padding:6px 14px;font-size:.88rem;">--</div>
-        </div>
-        <div class="console" id="addr-log">>> รอรับข้อมูล Modbus</div>
-      </div>
-
-      <div class="cfg-grid">
-        <!-- Address -->
-        <div class="card">
-          <div class="card-title">📍 เปลี่ยน Modbus Address</div>
-          <div class="cfg-row"><label>Address ใหม่ (1–247)</label><input type="number" id="cfg-addr" min="1" max="247" placeholder="1–247"><div class="hint">ESP32 จะ Verify ก่อนบันทึก</div></div>
-          <div class="cfg-row"><label>บันทึกถาวร?</label><select id="cfg-addr-save"><option value="true">✅ บันทึก NVS (คงอยู่หลัง reboot)</option><option value="false">⚡ ชั่วคราว (RAM)</option></select></div>
-          <button class="btn btn-full" onclick="sendAddress()">เปลี่ยน Address</button>
-        </div>
-
-        <!-- Mode -->
-        <div class="card">
-          <div class="card-title">🔀 Modbus Protocol</div>
-          <div class="cfg-row"><label>โหมด Protocol</label><select id="cfg-mode" style="width:100%;"><option value="ASCII">Modbus ASCII</option><option value="RTU">Modbus RTU</option></select><div class="hint">ต้องตรงกับการตั้งค่าบน SDU440</div></div>
-          <button class="btn btn-full" onclick="sendMode()" style="margin-top:12px;">เปลี่ยนโหมด</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── DEBUG ── -->
-    <div class="page" id="pg-debug">
-      <div class="card">
-        <div class="card-title">💻 Debug Console</div>
-        <div class="param-row">
-          <div class="param-label">ยิงตรง Register</div>
-          <div class="param-action">
-            Reg:<input type="text" id="d-reg" value="001D" style="width:54px;">
-            Val:<input type="number" id="d-val" value="50" style="width:54px;">
-            <button class="btn" onclick="sendDebug()">SEND</button>
-          </div>
-        </div>
-        <div class="console" id="debug-log">>> Debug Console</div>
-        <div style="margin-top:8px;display:flex;gap:8px;">
-          <button class="btn-ghost" onclick="clearLog()">Clear</button>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">📡 MQTT Inspector</div>
-        <div class="console" id="mqtt-log">>> รอรับข้อความ...</div>
-      </div>
-    </div>
-
-  </main>
-</div>
-</div><!-- /app -->
-
-<script>
-// ================================================================
-// STATE
-// ================================================================
-let STATE = {
-  deviceId: '', token: '', password: '', cfUrl: '',
-  currentSV: 0, currentAddr: 1,
+// ─── Color tokens ───────────────────────────────────────────
+// Industrial dark theme: near-black base, amber accent, teal live data
+const C = {
+  bg:      "#0f1117",
+  surface: "#181c25",
+  card:    "#1e2330",
+  border:  "#2a3045",
+  amber:   "#f5a623",
+  amberDim:"#7a5312",
+  teal:    "#00c9a7",
+  tealDim: "#004d3e",
+  red:     "#e05252",
+  green:   "#3ecf6e",
+  text:    "#e8eaf0",
+  muted:   "#6b7488",
+  white:   "#ffffff",
 };
-let mqttClient = null;
 
-// ── LocalStorage Session ──
-function loadSession() {
-  const s = localStorage.getItem('sdu440_session');
-  if (s) { Object.assign(STATE, JSON.parse(s)); return true; }
-  return false;
-}
-function saveSession() {
-  localStorage.setItem('sdu440_session', JSON.stringify(STATE));
-}
-
-// ================================================================
-// LOGIN
-// ================================================================
-async function doLogin() {
-  const deviceId = document.getElementById('l-deviceid').value.trim();
-  const token    = document.getElementById('l-token').value.trim();
-  const password = document.getElementById('l-password').value.trim();
-  const cfUrl    = document.getElementById('l-cfurl').value.trim().replace(/\/$/, '');
-  const errEl    = document.getElementById('login-err');
-
-  if (!deviceId || !token || !password || !cfUrl) {
-    showErr('กรุณากรอกข้อมูลให้ครบทุกช่อง'); return;
-  }
-
-  try {
-    const r = await fetch(`${cfUrl}/verify/${deviceId}`, {
-      headers: { 'X-Token': token, 'X-Password': password }
-    });
-    const j = await r.json();
-    if (!j.ok) { showErr('Token หรือ Password ไม่ถูกต้อง'); return; }
-
-    STATE = { deviceId, token, password, cfUrl, currentSV: 0, currentAddr: 1 };
-    saveSession();
-    startApp();
-  } catch(e) {
-    showErr('เชื่อมต่อ Cloudflare Worker ไม่ได้: ' + e.message);
-  }
-
-  function showErr(msg) {
-    errEl.style.display = 'block';
-    errEl.textContent   = '❌ ' + msg;
-  }
-}
-
-function doLogout() {
-  localStorage.removeItem('sdu440_session');
-  if (mqttClient && mqttClient.isConnected()) mqttClient.disconnect();
-  document.getElementById('app').style.display = 'none';
-  document.getElementById('login-screen').style.display = 'flex';
-}
-
-// ================================================================
-// START APP
-// ================================================================
-function startApp() {
-  document.getElementById('login-screen').style.display = 'none';
-  document.getElementById('app').style.display = 'block';
-  document.getElementById('top-deviceid').textContent = STATE.deviceId;
-  connectMQTT();
-  fetchInitialData();
-}
-
-// ================================================================
-// CHART
-// ================================================================
-const chart = new Chart(document.getElementById('main-chart').getContext('2d'), {
-  type: 'line',
-  data: {
-    labels: [],
-    datasets: [
-      { label:'PV', data:[], borderColor:'#4ade80', backgroundColor:'rgba(74,222,128,.05)', tension:.3, pointRadius:2 },
-      { label:'SV', data:[], borderColor:'#38bdf8', backgroundColor:'rgba(56,189,248,.05)', tension:.3, pointRadius:2, borderDash:[5,4] }
-    ]
+// ─── Styles ──────────────────────────────────────────────────
+const S = {
+  root: {
+    background: C.bg, color: C.text, minHeight: "100vh",
+    fontFamily: "'JetBrains Mono', 'Fira Mono', 'Consolas', monospace",
+    fontSize: 13,
   },
-  options: {
-    responsive:true, maintainAspectRatio:false,
-    plugins:{ legend:{ labels:{ color:'#94a3b8', font:{family:'JetBrains Mono',size:11} } } },
-    scales:{
-      y:{ grid:{color:'#1f2937'}, ticks:{color:'#6b7280'} },
-      x:{ grid:{color:'#1f2937'}, ticks:{color:'#6b7280', maxTicksLimit:8} }
-    }
-  }
-});
-function pushChart(pv, sv) {
-  if (chart.data.labels.length > 60) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); chart.data.datasets[1].data.shift(); }
-  chart.data.labels.push(new Date().toLocaleTimeString());
-  chart.data.datasets[0].data.push(pv);
-  chart.data.datasets[1].data.push(sv);
-  chart.update('none');
-}
-function applyScale() {
-  const mn = document.getElementById('g-min').value;
-  const mx = document.getElementById('g-max').value;
-  if (mn!=='') chart.options.scales.y.min=parseFloat(mn); else delete chart.options.scales.y.min;
-  if (mx!=='') chart.options.scales.y.max=parseFloat(mx); else delete chart.options.scales.y.max;
-  chart.update();
-}
-function clearChart() { chart.data.labels=[]; chart.data.datasets.forEach(d=>d.data=[]); chart.update(); }
-
-// ================================================================
-// CLOUDFLARE — โหลดข้อมูลเริ่มต้น
-// ================================================================
-async function fetchInitialData() {
-  try {
-    const r = await fetch(`${STATE.cfUrl}/data/${STATE.deviceId}`, {
-      headers: { 'X-Token': STATE.token, 'X-Password': STATE.password }
-    });
-    if (!r.ok) return;
-    const d = await r.json();
-    updateUI(d);
-    logInfo(`โหลดข้อมูลล่าสุดจาก Cloud — updated: ${d.updatedAt||'-'}`);
-  } catch(e) { logWarn('Cloud: ' + e.message); }
-}
-
-// ================================================================
-// MQTT
-// ================================================================
-function T(dir, key) { return `sdu440/${STATE.deviceId}/${dir}/${key}`; }
-
-function connectMQTT() {
-  const cid = 'WebSDU-' + Math.floor(Math.random()*99999);
-  mqttClient = new Paho.MQTT.Client('broker.hivemq.com', 8884, cid);
-  mqttClient.onConnectionLost = () => { setBadge('mqtt',false,'MQTT: หลุด'); setTimeout(connectMQTT,3000); };
-  mqttClient.onMessageArrived = onMqttMessage;
-  mqttClient.connect({
-    useSSL: true, timeout: 10,
-    onSuccess: () => {
-      setBadge('mqtt', true, 'MQTT: OK');
-      logInfo(`Connected → sdu440/${STATE.deviceId}/#`);
-      mqttClient.subscribe(`sdu440/${STATE.deviceId}/telemetry/#`);
-    },
-    onFailure: (e) => { setBadge('mqtt',false,'MQTT: Error'); logErr(e.errorMessage); setTimeout(connectMQTT,5000); }
-  });
-}
-
-const INPT_NAMES = ["K-Type TC","J-Type TC","E-Type TC","N-Type TC","C-Type TC","T-Type TC","K-Type 0.1","R-Type","S-Type","B-Type","JIS Pt100","DIN Pt100"];
-const AL_NAMES   = ["Off","High","Standby Hi","Low","Standby Lo","Dev Hi","Dev Lo","Deviation"];
-
-function onMqttMessage(m) {
-  const t = m.destinationName;
-  const p = m.payloadString;
-  // Inspector
-  const ml = document.getElementById('mqtt-log');
-  ml.innerHTML += `<span class="log-info">${t.split('/').slice(-2).join('/')}</span>: ${p}\n`;
-  ml.scrollTop = ml.scrollHeight;
-
-  if (t===T('telemetry','status')) setBadge('sdu', p==='true', p==='true'?'SDU440: Online':'SDU440: Error');
-  else if (t===T('telemetry','pv'))  { set('v-pv',p); pushChart(parseInt(p)||0, STATE.currentSV); }
-  else if (t===T('telemetry','sv'))  { STATE.currentSV=parseInt(p)||0; set('v-sv',p); set('v-sv-tag',p); }
-  else if (t===T('telemetry','mv'))  set('v-mv', p+' %');
-  else if (t===T('telemetry','p'))   set('v-p',  (parseFloat(p)/10).toFixed(1));
-  else if (t===T('telemetry','i'))   set('v-i',  p);
-  else if (t===T('telemetry','d'))   set('v-d',  p);
-  else if (t===T('telemetry','hys')) set('v-hys',p);
-  else if (t===T('telemetry','cp'))  set('v-cp', p);
-  else if (t===T('telemetry','tim')) set('v-tim',p);
-  else if (t===T('telemetry','at'))  set('v-at', p);
-  else if (t===T('telemetry','inpt')) set('v-inpt', INPT_NAMES[parseInt(p)]||p);
-  else if (t===T('telemetry','unit')) set('v-unit', parseInt(p)===0?'°C':'°F');
-  else if (t===T('telemetry','dp'))  set('v-dp',  p);
-  else if (t===T('telemetry','sch')) set('v-sch', p);
-  else if (t===T('telemetry','scl')) set('v-scl', p);
-  else if (t===T('telemetry','als1')) set('v-als1', AL_NAMES[parseInt(p)]||p);
-  else if (t===T('telemetry','hys1')) set('v-hys1',p);
-  else if (t===T('telemetry','als2')) set('v-als2', AL_NAMES[parseInt(p)]||p);
-  else if (t===T('telemetry','hys2')) set('v-hys2',p);
-  else if (t===T('telemetry','cact')) set('v-cact', parseInt(p)===0?'Rev':'Dir');
-  else if (t===T('telemetry','mode')) {
-    set('disp-mode', p);
-    document.getElementById('disp-mode').style.color = p==='RTU'?'var(--warn)':'var(--accent)';
-  }
-  else if (t===T('telemetry','address')) {
-    try {
-      const j=JSON.parse(p);
-      STATE.currentAddr=j.address;
-      set('disp-addr', j.address);
-      const ok=j.verify!==false;
-      const el=document.getElementById('disp-addr-status');
-      el.textContent = ok?'✅ Verified':'❌ ไม่ตอบสนอง (Rollback)';
-      el.className   = ok?'addr-ok':'addr-err';
-      const log=document.getElementById('addr-log');
-      log.innerHTML += `[${new Date().toLocaleTimeString()}] addr=${j.address} ok=${ok}${j.saved?' [NVS saved]':''}\n`;
-      log.scrollTop = log.scrollHeight;
-    } catch(e){}
-  }
-}
-
-function updateUI(d) {
-  const m = { 'v-pv':d.pv,'v-sv':d.sv,'v-sv-tag':d.sv,'v-mv':d.mv?(d.mv+'%'):null,
-    'v-p':d.p,'v-i':d.i,'v-d':d.d,'v-hys':d.hys,'v-cp':d.cp,'v-tim':d.tim,'v-at':d.at,
-    'v-inpt':d.inpt,'v-unit':d.unit,'v-dp':d.dp,'v-sch':d.sch,'v-scl':d.scl,
-    'v-als1':d.als1,'v-hys1':d.hys1,'v-als2':d.als2,'v-hys2':d.hys2,'v-cact':d.cact };
-  for(const [id,val] of Object.entries(m)) if(val!==undefined&&val!==null) set(id,val);
-}
-
-// ================================================================
-// SEND COMMANDS (MQTT → ESP32)
-// ================================================================
-function pub(topic, payload) {
-  if (!mqttClient||!mqttClient.isConnected()) { logErr('MQTT ไม่ได้เชื่อมต่อ'); return; }
-  const msg = new Paho.MQTT.Message(String(payload));
-  msg.destinationName = topic;
-  mqttClient.send(msg);
-  logInfo(`→ ${topic.split('/').slice(-2).join('/')}: ${payload}`);
-}
-
-function cmd(key, inputId) {
-  const val = document.getElementById(inputId).value;
-  if (val==='') { logErr('กรุณากรอกค่า'); return; }
-  pub(T('command',key), val);
-}
-
-function sendDebug() {
-  pub(T('command','debug'), `${document.getElementById('d-reg').value},${document.getElementById('d-val').value}`);
-}
-
-function sendAddress() {
-  const addr = parseInt(document.getElementById('cfg-addr').value);
-  const save = document.getElementById('cfg-addr-save').value==='true';
-  if (!addr||addr<1||addr>247) { logErr('Address ต้องอยู่ 1–247'); return; }
-  pub(T('command','set_address'), JSON.stringify({address:addr,save}));
-  logInfo(`Hot Swap → address=${addr} save=${save}`);
-}
-
-function sendMode() {
-  pub(T('command','mode'), document.getElementById('cfg-mode').value);
-}
-
-// ================================================================
-// UI HELPERS
-// ================================================================
-function set(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
-function setBadge(which, ok, txt) {
-  const el = document.getElementById(`badge-${which}`);
-  el.className = 'badge ' + (ok?'ok':'err');
-  document.getElementById(`badge-${which}-txt`).textContent = txt;
-}
-function showPage(id, el) {
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  if(el) el.classList.add('active');
-}
-function logInfo(msg) { appendLog(`<span class="log-info">[INFO]</span> ${msg}`); }
-function logErr(msg)  { appendLog(`<span class="log-err">[ERR]</span>  ${msg}`); }
-function logWarn(msg) { appendLog(`<span class="log-warn">[WARN]</span> ${msg}`); }
-function appendLog(html) {
-  const el=document.getElementById('debug-log');
-  el.innerHTML+=html+'\n'; el.scrollTop=el.scrollHeight;
-}
-function clearLog() { document.getElementById('debug-log').innerHTML='>> Log cleared\n'; }
-
-// ================================================================
-// INIT
-// ================================================================
-window.onload = () => {
-  if (loadSession() && STATE.deviceId && STATE.token && STATE.password && STATE.cfUrl) {
-    // Auto-login จาก session
-    document.getElementById('l-deviceid').value = STATE.deviceId;
-    document.getElementById('l-token').value    = STATE.token;
-    document.getElementById('l-cfurl').value    = STATE.cfUrl;
-    startApp();
-  }
+  header: {
+    background: C.surface, borderBottom: `1px solid ${C.border}`,
+    padding: "12px 24px", display: "flex", alignItems: "center", gap: 16,
+  },
+  logo: {
+    fontSize: 18, fontWeight: 700, color: C.amber, letterSpacing: "0.08em",
+  },
+  pill: (connected) => ({
+    fontSize: 11, padding: "3px 10px", borderRadius: 20,
+    background: connected ? C.tealDim : "#2a1a1a",
+    color: connected ? C.teal : C.red,
+    border: `1px solid ${connected ? C.teal : C.red}`,
+    fontWeight: 600,
+  }),
+  ipRow: {
+    display: "flex", alignItems: "center", gap: 8, marginLeft: "auto",
+  },
+  input: {
+    background: C.card, border: `1px solid ${C.border}`, color: C.text,
+    borderRadius: 6, padding: "6px 12px", fontSize: 13,
+    fontFamily: "inherit", outline: "none", width: 160,
+  },
+  btn: (variant = "primary") => ({
+    background: variant === "primary" ? C.amber : "transparent",
+    color: variant === "primary" ? "#000" : C.amber,
+    border: `1px solid ${C.amber}`,
+    borderRadius: 6, padding: "6px 14px", fontSize: 12, fontWeight: 700,
+    cursor: "pointer", fontFamily: "inherit",
+    transition: "opacity 0.15s",
+  }),
+  main: { padding: "20px 24px", maxWidth: 1100, margin: "0 auto" },
+  grid3: {
+    display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 14, marginBottom: 20,
+  },
+  grid2: {
+    display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14, marginBottom: 20,
+  },
+  card: {
+    background: C.card, border: `1px solid ${C.border}`,
+    borderRadius: 10, padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 10, fontWeight: 700, color: C.muted,
+    letterSpacing: "0.12em", textTransform: "uppercase",
+    marginBottom: 12, paddingBottom: 8, borderBottom: `1px solid ${C.border}`,
+  },
+  bigNum: {
+    fontSize: 36, fontWeight: 700, lineHeight: 1,
+    color: C.teal, letterSpacing: "-0.02em",
+  },
+  label: { fontSize: 11, color: C.muted, marginTop: 4 },
+  row: { display: "flex", alignItems: "center", gap: 8, marginBottom: 10 },
+  regLabel: { flex: 1, fontSize: 12, color: C.muted },
+  numInput: {
+    background: C.surface, border: `1px solid ${C.border}`, color: C.text,
+    borderRadius: 6, padding: "5px 8px", fontSize: 12, width: 80,
+    fontFamily: "inherit", outline: "none", textAlign: "right",
+  },
+  sendBtn: {
+    background: C.amberDim, color: C.amber,
+    border: `1px solid ${C.amberDim}`,
+    borderRadius: 5, padding: "5px 10px", fontSize: 11, fontWeight: 700,
+    cursor: "pointer", fontFamily: "inherit",
+  },
+  statusDot: (ok) => ({
+    width: 8, height: 8, borderRadius: "50%",
+    background: ok ? C.green : C.red,
+    display: "inline-block", marginRight: 6,
+    boxShadow: ok ? `0 0 6px ${C.green}` : "none",
+  }),
+  toast: (type) => ({
+    position: "fixed", bottom: 24, right: 24,
+    background: type === "ok" ? C.tealDim : "#3a1010",
+    border: `1px solid ${type === "ok" ? C.teal : C.red}`,
+    color: type === "ok" ? C.teal : C.red,
+    padding: "10px 18px", borderRadius: 8, fontSize: 12, fontWeight: 700,
+    zIndex: 1000, transition: "opacity 0.3s",
+  }),
+  tabBar: {
+    display: "flex", gap: 4, marginBottom: 18,
+    borderBottom: `1px solid ${C.border}`, paddingBottom: 0,
+  },
+  tab: (active) => ({
+    padding: "8px 16px", fontSize: 12, fontWeight: 600, cursor: "pointer",
+    background: "transparent", border: "none",
+    color: active ? C.amber : C.muted,
+    borderBottom: `2px solid ${active ? C.amber : "transparent"}`,
+    fontFamily: "inherit", transition: "color 0.15s",
+  }),
 };
-</script>
-</body>
-</html>
+
+// ─── Toast ──────────────────────────────────────────────────
+function Toast({ msg, type }) {
+  if (!msg) return null;
+  return <div style={S.toast(type)}>{type === "ok" ? "✓" : "✗"} {msg}</div>;
+}
+
+// ─── RegisterRow ─────────────────────────────────────────────
+function RegRow({ label, regKey, currentVal, ip, onSuccess, unit = "" }) {
+  const [val, setVal] = useState(currentVal ?? "");
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (currentVal !== undefined) setVal(currentVal);
+  }, [currentVal]);
+
+  async function send() {
+    if (!ip) return;
+    setLoading(true);
+    try {
+      const r = await fetch(`http://${ip}/write`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reg: regKey, value: Number(val) }),
+      });
+      const d = await r.json();
+      if (d.ok) onSuccess(`${label} = ${val}${unit} ✓`);
+      else onSuccess(`Error: ${d.error}`, "err");
+    } catch {
+      onSuccess("Cannot connect to ESP32", "err");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={S.row}>
+      <span style={S.regLabel}>{label}</span>
+      <span style={{ fontSize: 11, color: C.teal, minWidth: 40, textAlign: "right" }}>
+        {currentVal ?? "—"}{unit}
+      </span>
+      <input
+        style={S.numInput}
+        type="number"
+        value={val}
+        onChange={e => setVal(e.target.value)}
+        onKeyDown={e => e.key === "Enter" && send()}
+      />
+      <button style={S.sendBtn} onClick={send} disabled={loading || !ip}>
+        {loading ? "…" : "SET"}
+      </button>
+    </div>
+  );
+}
+
+// ─── Main App ────────────────────────────────────────────────
+export default function App() {
+  const [ipInput, setIpInput]   = useState("");
+  const [ip, setIp]             = useState("");
+  const [data, setData]         = useState(null);
+  const [connected, setConnected] = useState(false);
+  const [toast, setToast]       = useState(null);
+  const [tab, setTab]           = useState("live");
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const timerRef = useRef(null);
+
+  // ── Load saved IP from sessionStorage ──
+  useEffect(() => {
+    const saved = sessionStorage.getItem("sdu_ip");
+    if (saved) { setIpInput(saved); }
+  }, []);
+
+  const showToast = useCallback((msg, type = "ok") => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  }, []);
+
+  const fetchData = useCallback(async (targetIp) => {
+    const addr = targetIp || ip;
+    if (!addr) return;
+    try {
+      const r = await fetch(`http://${addr}/status`);
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      const d = await r.json();
+      setData(d);
+      setConnected(true);
+    } catch {
+      setConnected(false);
+    }
+  }, [ip]);
+
+  // Auto-refresh every 2s
+  useEffect(() => {
+    if (!ip || !autoRefresh) { clearInterval(timerRef.current); return; }
+    timerRef.current = setInterval(() => fetchData(), 2000);
+    return () => clearInterval(timerRef.current);
+  }, [ip, autoRefresh, fetchData]);
+
+  function connect() {
+    const addr = ipInput.trim();
+    if (!addr) return;
+    sessionStorage.setItem("sdu_ip", addr);
+    setIp(addr);
+    fetchData(addr);
+  }
+
+  // ── Tabs ─────────────────────────────────────────────────
+  const tabs = [
+    { id: "live",   label: "Live Data" },
+    { id: "pid",    label: "PID / Control" },
+    { id: "alarm",  label: "Alarms" },
+    { id: "config", label: "Config / Scale" },
+    { id: "modbus", label: "Modbus" },
+  ];
+
+  const d = data || {};
+
+  return (
+    <div style={S.root}>
+      {/* Header */}
+      <div style={S.header}>
+        <span style={S.logo}>SDU440</span>
+        <span style={{ fontSize: 11, color: C.muted }}>IoT Controller</span>
+        <span style={S.pill(connected)}>
+          <span style={S.statusDot(connected)} />
+          {connected ? "CONNECTED" : "OFFLINE"}
+        </span>
+        <div style={S.ipRow}>
+          <input
+            style={S.input}
+            placeholder="192.168.1.xxx"
+            value={ipInput}
+            onChange={e => setIpInput(e.target.value)}
+            onKeyDown={e => e.key === "Enter" && connect()}
+          />
+          <button style={S.btn("primary")} onClick={connect}>CONNECT</button>
+          <button
+            style={S.btn(autoRefresh ? "outline" : "primary")}
+            onClick={() => setAutoRefresh(v => !v)}
+            title="Toggle auto-refresh"
+          >
+            {autoRefresh ? "⏸ AUTO" : "▶ AUTO"}
+          </button>
+          <button style={S.btn("outline")} onClick={() => fetchData()}>↻</button>
+        </div>
+      </div>
+
+      <div style={S.main}>
+        {!ip && (
+          <div style={{ ...S.card, textAlign: "center", padding: 40, color: C.muted }}>
+            <div style={{ fontSize: 32, marginBottom: 12 }}>📡</div>
+            <div style={{ fontSize: 14, marginBottom: 8, color: C.text }}>ใส่ IP ของ ESP32 เพื่อเชื่อมต่อ</div>
+            <div style={{ fontSize: 12 }}>ดู IP ได้จาก Serial Monitor หลัง Upload firmware</div>
+          </div>
+        )}
+
+        {ip && (
+          <>
+            {/* Live summary cards */}
+            <div style={S.grid3}>
+              {[
+                { key: "pv", label: "Process Value (PV)", color: C.teal },
+                { key: "sv", label: "Set Value (SV)",     color: C.amber },
+                { key: "mv", label: "Output MV (%)",      color: "#a78bfa" },
+              ].map(({ key, label, color }) => (
+                <div key={key} style={S.card}>
+                  <div style={{ ...S.bigNum, color }}>{d[key] ?? "—"}</div>
+                  <div style={S.label}>{label}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* Status bar */}
+            <div style={{ ...S.card, padding: "10px 16px", marginBottom: 20, display: "flex", gap: 24 }}>
+              <span style={{ fontSize: 12 }}>
+                <span style={S.statusDot(d.ok)} />
+                Modbus: {d.ok ? "OK" : "Error"}
+              </span>
+              <span style={{ fontSize: 12, color: C.muted }}>IP: <b style={{ color: C.text }}>{d.ip || ip}</b></span>
+              <span style={{ fontSize: 12, color: C.muted }}>WiFi: <b style={{ color: C.text }}>{d.rssi ?? "—"} dBm</b></span>
+              <span style={{ fontSize: 12, color: C.muted }}>Uptime: <b style={{ color: C.text }}>{d.uptime ? (d.uptime / 1000).toFixed(0) + "s" : "—"}</b></span>
+            </div>
+
+            {/* Tabs */}
+            <div style={S.tabBar}>
+              {tabs.map(t => (
+                <button key={t.id} style={S.tab(tab === t.id)} onClick={() => setTab(t.id)}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
+
+            {/* ── TAB: Live Data ── */}
+            {tab === "live" && (
+              <div style={S.grid2}>
+                <div style={S.card}>
+                  <div style={S.sectionTitle}>Set Value Control</div>
+                  <RegRow label="SV — Set Value" regKey="sv" currentVal={d.sv} ip={ip} onSuccess={showToast} />
+                </div>
+                <div style={S.card}>
+                  <div style={S.sectionTitle}>Device Info</div>
+                  {[
+                    ["InPt — Input Type", d.InPt],
+                    ["UnIt — Unit",       d.UnIt],
+                    ["dP — Decimal Pt",   d.dP],
+                    ["CACt — Contact",    d.CACt],
+                  ].map(([label, val]) => (
+                    <div key={label} style={S.row}>
+                      <span style={S.regLabel}>{label}</span>
+                      <span style={{ color: C.teal, fontSize: 12 }}>{val ?? "—"}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB: PID / Control ── */}
+            {tab === "pid" && (
+              <div style={S.grid2}>
+                <div style={S.card}>
+                  <div style={S.sectionTitle}>PID Parameters</div>
+                  <RegRow label="P — Proportional" regKey="P"   currentVal={d.P}   ip={ip} onSuccess={showToast} />
+                  <RegRow label="I — Integral"      regKey="I"   currentVal={d.I}   ip={ip} onSuccess={showToast} />
+                  <RegRow label="D — Derivative"    regKey="D"   currentVal={d.D}   ip={ip} onSuccess={showToast} />
+                  <RegRow label="HyS — Hysteresis"  regKey="HyS" currentVal={d.HyS} ip={ip} onSuccess={showToast} />
+                </div>
+                <div style={S.card}>
+                  <div style={S.sectionTitle}>Control Parameters</div>
+                  <RegRow label="CP — Cycle Period" regKey="CP"  currentVal={d.CP}  ip={ip} onSuccess={showToast} unit="s" />
+                  <RegRow label="tIm — Time"        regKey="tIm" currentVal={d.tIm} ip={ip} onSuccess={showToast} />
+                  <RegRow label="AT — Auto-Tune"    regKey="AT"  currentVal={d.AT}  ip={ip} onSuccess={showToast} />
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB: Alarms ── */}
+            {tab === "alarm" && (
+              <div style={S.grid2}>
+                <div style={S.card}>
+                  <div style={S.sectionTitle}>Alarm 1</div>
+                  <RegRow label="ALS1 — Alarm 1 SP"  regKey="ALS1" currentVal={d.ALS1} ip={ip} onSuccess={showToast} />
+                  <RegRow label="HyS1 — Hysteresis 1" regKey="HyS1" currentVal={d.HyS1} ip={ip} onSuccess={showToast} />
+                </div>
+                <div style={S.card}>
+                  <div style={S.sectionTitle}>Alarm 2</div>
+                  <RegRow label="ALS2 — Alarm 2 SP"  regKey="ALS2" currentVal={d.ALS2} ip={ip} onSuccess={showToast} />
+                  <RegRow label="HyS2 — Hysteresis 2" regKey="HyS2" currentVal={d.HyS2} ip={ip} onSuccess={showToast} />
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB: Config / Scale ── */}
+            {tab === "config" && (
+              <div style={S.grid2}>
+                <div style={S.card}>
+                  <div style={S.sectionTitle}>Scale</div>
+                  <RegRow label="SCH — Scale High" regKey="SCH" currentVal={d.SCH} ip={ip} onSuccess={showToast} />
+                  <RegRow label="SCL — Scale Low"  regKey="SCL" currentVal={d.SCL} ip={ip} onSuccess={showToast} />
+                </div>
+                <div style={S.card}>
+                  <div style={S.sectionTitle}>Input / Display</div>
+                  <RegRow label="InPt — Input Type"  regKey="InPt" currentVal={d.InPt} ip={ip} onSuccess={showToast} />
+                  <RegRow label="UnIt — Unit"         regKey="UnIt" currentVal={d.UnIt} ip={ip} onSuccess={showToast} />
+                  <RegRow label="dP — Decimal Pt"     regKey="dP"   currentVal={d.dP}   ip={ip} onSuccess={showToast} />
+                  <RegRow label="CACt — Contact Act"  regKey="CACt" currentVal={d.CACt} ip={ip} onSuccess={showToast} />
+                </div>
+              </div>
+            )}
+
+            {/* ── TAB: Modbus ── */}
+            {tab === "modbus" && (
+              <div style={S.card}>
+                <div style={S.sectionTitle}>Modbus ASCII — ตั้งค่าโดยตรง</div>
+                <div style={{ marginBottom: 16, padding: 12, background: C.surface, borderRadius: 8, fontSize: 12, color: C.muted }}>
+                  ส่งค่าไปยัง Register ของ SDU440 โดยตรงผ่าน RS485 Modbus ASCII<br />
+                  <span style={{ color: C.amber }}>Address: {SDU_ADDRESS || 1} | Baud: 9600 | Format: ASCII</span>
+                </div>
+                <div style={S.grid2}>
+                  <div>
+                    <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>STANDARD REGISTERS (FC06)</div>
+                    {[
+                      ["0x001D", "SV",  d.sv,  "sv"],
+                      ["0x0001", "P",   d.P,   "P"],
+                      ["0x0002", "I",   d.I,   "I"],
+                      ["0x0003", "D",   d.D,   "D"],
+                      ["0x0004", "HyS", d.HyS, "HyS"],
+                      ["0x0007", "CP",  d.CP,  "CP"],
+                      ["0x0008", "tIm", d.tIm, "tIm"],
+                      ["0x0009", "AT",  d.AT,  "AT"],
+                    ].map(([addr, label, val, key]) => (
+                      <div key={key} style={{ ...S.row, paddingBottom: 4 }}>
+                        <span style={{ fontSize: 11, color: C.amberDim, width: 50 }}>{addr}</span>
+                        <RegRow label={label} regKey={key} currentVal={val} ip={ip} onSuccess={showToast} />
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <div style={{ fontSize: 11, color: C.muted, marginBottom: 8 }}>EXTENDED REGISTERS (unlock 0x000A=5 first)</div>
+                    {[
+                      ["0x000B", "InPt", d.InPt, "InPt"],
+                      ["0x000C", "UnIt", d.UnIt, "UnIt"],
+                      ["0x000D", "dP",   d.dP,   "dP"],
+                      ["0x000E", "SCH",  d.SCH,  "SCH"],
+                      ["0x000F", "SCL",  d.SCL,  "SCL"],
+                      ["0x0010", "ALS1", d.ALS1, "ALS1"],
+                      ["0x0011", "HyS1", d.HyS1, "HyS1"],
+                      ["0x0012", "ALS2", d.ALS2, "ALS2"],
+                      ["0x0013", "HyS2", d.HyS2, "HyS2"],
+                      ["0x0016", "CACt", d.CACt, "CACt"],
+                    ].map(([addr, label, val, key]) => (
+                      <div key={key} style={{ ...S.row, paddingBottom: 4 }}>
+                        <span style={{ fontSize: 11, color: C.amberDim, width: 50 }}>{addr}</span>
+                        <RegRow label={label} regKey={key} currentVal={val} ip={ip} onSuccess={showToast} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {toast && <Toast msg={toast.msg} type={toast.type} />}
+
+      {/* Footer */}
+      <div style={{ textAlign: "center", padding: "16px", fontSize: 11, color: C.muted, borderTop: `1px solid ${C.border}` }}>
+        SDU440 Web UI — ESP32 HTTP Server |{" "}
+        <a href="https://github.com/your-repo/sdu440-ui" target="_blank" style={{ color: C.amber }}>
+          GitHub: your-repo/sdu440-ui
+        </a>
+      </div>
+    </div>
+  );
+}
