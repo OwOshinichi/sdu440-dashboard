@@ -1,643 +1,688 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SDU440 Commercial IoT Center</title>
-    
-    <!-- ไลบรารีที่จำเป็น -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
-    
-    <style>
-        :root {
-            --bg-main: #060813;
-            --bg-surface: #0b0f19;
-            --bg-card: #111625;
-            --border-color: #1e2640;
-            --primary: #38bdf8;
-            --primary-hover: #0ea5e9;
-            --success: #10b981;
-            --danger: #ef4444;
-            --warning: #f59e0b;
-            --text-main: #f1f5f9;
-            --text-muted: #64748b;
-        }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDU440 Control Center</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Prompt:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ── TOKENS ── */
+:root{
+  --bg:#07090f; --surface:#0d1117; --card:#111827;
+  --border:#1f2937; --border2:#374151;
+  --text:#e2e8f0; --muted:#6b7280;
+  --accent:#38bdf8; --accent2:#0ea5e9;
+  --success:#4ade80; --danger:#f87171; --warn:#fbbf24; --purple:#a78bfa;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Prompt',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-            font-family: 'Inter', sans-serif;
-        }
+/* ── LOGIN SCREEN ── */
+#login-screen{
+  display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:20px;
+}
+.login-card{
+  background:var(--card);border:1px solid var(--border);border-radius:16px;
+  padding:36px;width:100%;max-width:420px;
+}
+.login-logo{
+  text-align:center;margin-bottom:28px;
+}
+.login-logo h1{font-size:1.6rem;color:var(--accent);font-family:'JetBrains Mono',monospace;}
+.login-logo p{color:var(--muted);font-size:.85rem;margin-top:4px;}
+.form-row{margin-bottom:14px;}
+.form-row label{display:block;font-size:.82rem;color:#94a3b8;margin-bottom:5px;}
+.form-row input{
+  width:100%;background:var(--bg);border:1px solid var(--border2);
+  color:#fff;padding:10px 12px;border-radius:8px;font-size:.9rem;
+  font-family:'JetBrains Mono',monospace;
+}
+.form-row input:focus{outline:none;border-color:var(--accent);}
+.form-row .hint{font-size:.72rem;color:var(--muted);margin-top:3px;}
+.btn-login{
+  width:100%;background:var(--accent);color:#000;border:none;
+  padding:12px;border-radius:8px;font-size:1rem;font-weight:700;
+  cursor:pointer;margin-top:8px;font-family:'Prompt',sans-serif;
+}
+.btn-login:hover{background:var(--accent2);}
+.login-err{
+  background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);
+  color:var(--danger);border-radius:8px;padding:10px 14px;
+  font-size:.83rem;margin-top:12px;display:none;
+}
 
-        body {
-            background: var(--bg-main);
-            color: var(--text-main);
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
+/* ── APP LAYOUT ── */
+#app{display:none;}
+.layout{
+  display:grid;
+  grid-template-columns:240px 1fr;
+  grid-template-rows:54px 1fr;
+  min-height:100vh;
+}
 
-        /* ---------------- LOG-IN VIEWPORT ---------------- */
-        #gate-viewport {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(circle at center, #0f172a 0%, #020617 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 999;
-        }
+/* ── TOPBAR ── */
+.topbar{
+  grid-column:1/-1;background:var(--surface);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 20px;gap:12px;
+}
+.topbar-logo{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700;color:var(--accent);}
+.topbar-logo span{color:var(--muted);font-weight:400;}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px;}
+.badge{
+  display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;
+  font-size:.75rem;font-weight:600;border:1px solid var(--border2);background:var(--card);
+}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--muted);}
+.badge.ok .badge-dot{background:var(--success);box-shadow:0 0 5px var(--success);}
+.badge.err .badge-dot{background:var(--danger);}
+.device-chip{
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;
+  color:var(--accent);background:rgba(56,189,248,.1);
+  border:1px solid rgba(56,189,248,.25);border-radius:6px;padding:3px 9px;
+}
+.logout-btn{
+  background:none;border:1px solid var(--border2);color:var(--muted);
+  padding:4px 11px;border-radius:6px;cursor:pointer;font-size:.78rem;
+}
+.logout-btn:hover{color:var(--danger);border-color:var(--danger);}
 
-        .gate-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 40px;
-            width: 440px;
-            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
-        }
+/* ── SIDEBAR ── */
+.sidebar{
+  background:var(--surface);border-right:1px solid var(--border);
+  padding:14px 10px;display:flex;flex-direction:column;gap:3px;overflow-y:auto;
+}
+.nav-section{font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px;}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:7px;
+  cursor:pointer;font-size:.86rem;color:var(--muted);border:1px solid transparent;transition:all .15s;
+}
+.nav-item:hover{background:var(--card);color:var(--text);}
+.nav-item.active{background:rgba(56,189,248,.1);color:var(--accent);border-color:rgba(56,189,248,.2);}
+.nav-icon{width:18px;text-align:center;font-size:.95rem;}
 
-        .gate-hdr {
-            margin-bottom: 24px;
-            text-align: center;
-        }
+/* ── MAIN ── */
+.main{overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px;}
+.page{display:none;flex-direction:column;gap:16px;}
+.page.active{display:flex;}
 
-        .gate-hdr h2 {
-            font-size: 1.6rem;
-            color: var(--primary);
-            margin-bottom: 6px;
-        }
+/* ── MONITOR ── */
+.monitor-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.monitor-card{
+  background:var(--card);border:1px solid var(--border);border-radius:11px;padding:16px 18px;
+}
+.monitor-label{font-size:.73rem;color:var(--muted);margin-bottom:5px;letter-spacing:.04em;}
+.monitor-val{font-family:'JetBrains Mono',monospace;font-size:2.4rem;font-weight:700;line-height:1;}
+.monitor-unit{font-size:.78rem;color:var(--muted);margin-top:3px;}
 
-        .gate-hdr p {
-            color: var(--text-muted);
-            font-size: 0.85rem;
-        }
+/* ── CARD ── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:18px;}
+.card-title{
+  font-size:.87rem;font-weight:600;color:#94a3b8;
+  display:flex;align-items:center;gap:7px;
+  margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border);
+}
 
-        .input-group {
-            margin-bottom: 16px;
-        }
+/* ── PARAM ROW ── */
+.param-row{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:9px 13px;border-radius:7px;
+  background:var(--bg);border:1px solid var(--border);margin-bottom:7px;gap:10px;
+}
+.param-label{font-size:.84rem;color:#cbd5e1;flex:1;}
+.param-label small{display:block;font-size:.71rem;color:var(--muted);font-family:'JetBrains Mono',monospace;}
+.param-action{display:flex;align-items:center;gap:7px;flex-shrink:0;}
+.tag{
+  font-family:'JetBrains Mono',monospace;background:#1a2234;border:1px solid var(--border2);
+  padding:3px 9px;border-radius:4px;font-size:.84rem;min-width:50px;text-align:center;color:#94a3b8;
+}
 
-        .input-group label {
-            display: block;
-            font-size: 0.75rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            margin-bottom: 6px;
-            font-weight: 600;
-        }
+/* ── FORM ── */
+input[type=number],input[type=text],select{
+  background:#0d1117;border:1px solid var(--border2);color:#fff;
+  padding:6px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.84rem;
+}
+input[type=number]:focus,input[type=text]:focus,select:focus{outline:none;border-color:var(--accent);}
+input[type=number]{width:70px;text-align:center;}
+select{cursor:pointer;font-family:'Prompt',sans-serif;}
+.btn{
+  background:var(--accent);color:#000;border:none;padding:6px 13px;border-radius:6px;
+  font-weight:700;cursor:pointer;font-size:.81rem;white-space:nowrap;
+}
+.btn:hover{background:var(--accent2);}
+.btn-ghost{
+  background:none;border:1px solid var(--border2);color:var(--text);
+  padding:6px 13px;border-radius:6px;font-size:.81rem;cursor:pointer;
+}
+.btn-ghost:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:var(--danger)!important;color:#000!important;}
+.btn-full{width:100%;padding:10px;font-size:.9rem;margin-top:4px;}
 
-        .ctrl-input {
-            width: 100%;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            padding: 12px 16px;
-            color: white;
-            border-radius: 8px;
-            font-size: 0.95rem;
-            outline: none;
-            transition: all 0.2s;
-        }
+/* ── MODBUS CONFIG ── */
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.cfg-group{background:var(--bg);border:1px solid var(--border);border-radius:9px;padding:15px;}
+.cfg-group-title{font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);margin-bottom:11px;}
+.cfg-row{margin-bottom:11px;}
+.cfg-row label{display:block;font-size:.79rem;color:#94a3b8;margin-bottom:4px;}
+.cfg-row input,.cfg-row select{width:100%;}
+.cfg-row .hint{font-size:.70rem;color:var(--muted);margin-top:2px;}
+.addr-display{
+  display:flex;align-items:center;gap:12px;
+  background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 15px;margin-bottom:11px;
+}
+.addr-num{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700;color:var(--accent);min-width:44px;text-align:center;}
+.addr-ok{color:var(--success);}
+.addr-err{color:var(--danger);}
 
-        .ctrl-input:focus {
-            border-color: var(--primary);
-        }
+/* ── CHART ── */
+.chart-wrap{position:relative;height:210px;}
 
-        .btn-auth {
-            width: 100%;
-            background: var(--primary);
-            color: #020617;
-            font-weight: 700;
-            padding: 14px;
-            border: none;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 1rem;
-            margin-top: 10px;
-            transition: all 0.2s;
-        }
+/* ── CONSOLE ── */
+.console{
+  background:#03040a;border:1px solid var(--border);border-radius:6px;padding:10px 12px;
+  font-family:'JetBrains Mono',monospace;font-size:.77rem;height:120px;overflow-y:auto;
+  color:var(--success);line-height:1.7;
+}
+.log-err{color:var(--danger);}
+.log-info{color:var(--accent);}
+.log-warn{color:var(--warn);}
 
-        .btn-auth:hover {
-            background: var(--primary-hover);
-        }
+/* ── ALERT ── */
+.alert{padding:9px 13px;border-radius:8px;font-size:.82rem;display:flex;align-items:center;gap:7px;border:1px solid;}
+.alert-info{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.2);color:var(--accent);}
+.alert-success{background:rgba(74,222,128,.08);border-color:rgba(74,222,128,.2);color:var(--success);}
+.alert-warn{background:rgba(251,191,36,.08);border-color:rgba(251,191,36,.2);color:var(--warn);}
 
-        /* ---------------- DASHBOARD VIEWPORT ---------------- */
-        #app-viewport {
-            display: none;
-            flex-direction: column;
-            min-height: 100vh;
-        }
-
-        .top-nav {
-            height: 64px;
-            background: var(--bg-surface);
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 32px;
-        }
-
-        .brand-title {
-            font-weight: 700;
-            color: white;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            font-size: 1.2rem;
-        }
-
-        .tenant-pill {
-            background: rgba(56,189,248,0.1);
-            border: 1px solid rgba(56,189,248,0.3);
-            color: var(--primary);
-            padding: 4px 16px;
-            border-radius: 20px;
-            font-size: 0.85rem;
-        }
-
-        .workspace {
-            padding: 32px;
-            max-width: 1600px;
-            width: 100%;
-            margin: 0 auto;
-            display: flex;
-            flex-direction: column;
-            gap: 24px;
-        }
-
-        .panel-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 24px;
-        }
-
-        .metric-card {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
-
-        .metric-card.pv { border-left: 4px solid var(--success); }
-        .metric-card.sv { border-left: 4px solid var(--primary); }
-        .metric-card.mv { border-left: 4px solid var(--warning); }
-
-        .m-lbl {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            margin-bottom: 16px;
-        }
-
-        .m-val {
-            font-size: 2.8rem;
-            font-weight: 700;
-            font-family: 'JetBrains Mono', monospace;
-            color: white;
-        }
-
-        .dashboard-split {
-            display: grid;
-            grid-template-columns: 1.5fr 1fr;
-            gap: 24px;
-        }
-
-        .content-box {
-            background: var(--bg-surface);
-            border: 1px solid var(--border-color);
-            border-radius: 12px;
-            padding: 24px;
-        }
-
-        .box-hdr {
-            font-size: 1rem;
-            font-weight: 600;
-            color: white;
-            margin-bottom: 24px;
-            padding-bottom: 12px;
-            border-bottom: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .btn-action {
-            background: var(--primary);
-            color: #020617;
-            font-weight: 600;
-            font-size: 0.85rem;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.2s;
-        }
-
-        .btn-action:hover {
-            background: var(--primary-hover);
-        }
-
-        /* ---------------- CONTROL PANEL ROW ---------------- */
-        .config-row {
-            display: flex;
-            gap: 12px;
-            margin-bottom: 16px;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .config-label {
-            flex: 1;
-            font-size: 0.9rem;
-            color: white;
-        }
-
-        .config-label small {
-            display: block;
-            color: var(--text-muted);
-            font-size: 0.75rem;
-            margin-top: 2px;
-        }
-
-        .ctrl-input-small {
-            width: 100px;
-            background: var(--bg-card);
-            border: 1px solid var(--border-color);
-            padding: 8px 12px;
-            color: white;
-            border-radius: 6px;
-            font-size: 0.9rem;
-            outline: none;
-            text-align: center;
-        }
-
-        .ctrl-input-small:focus { border-color: var(--primary); }
-
-        .system-logs {
-            background: #02040a;
-            border: 1px solid var(--border-color);
-            height: 120px;
-            border-radius: 8px;
-            font-family: 'JetBrains Mono', monospace;
-            font-size: 0.75rem;
-            padding: 12px;
-            overflow-y: auto;
-            color: #34d399;
-            margin-top: 24px;
-        }
-
-    </style>
+/* ── RESPONSIVE ── */
+@media(max-width:820px){
+  .layout{grid-template-columns:1fr;}
+  .sidebar{display:none;}
+  .monitor-row{grid-template-columns:1fr;}
+  .cfg-grid{grid-template-columns:1fr;}
+}
+</style>
 </head>
 <body>
 
-<!-- ==============================================
-     หน้าจอที่ 1: เข้าสู่ระบบ (Log-In)
-=============================================== -->
-<div id="gate-viewport">
-    <div class="gate-card">
-        <div class="gate-hdr">
-            <h2>SDU440 Enterprise</h2>
-            <p>ระบบศูนย์กลางจัดการข้อมูลเกตเวย์เชิงพาณิชย์</p>
-        </div>
-        <div class="input-group">
-            <label>CUSTOMER IDENTIFIER (TENANT ID)</label>
-            <input type="text" id="g-tenant" class="ctrl-input" value="companyA">
-        </div>
-        <div class="input-group">
-            <label>GATEWAY PHYSICAL ID (DEVICE UID)</label>
-            <input type="text" id="g-device" class="ctrl-input" placeholder="ใส่รหัส SDU440-XXXX ที่ได้จาก Serial Monitor">
-        </div>
-        <div class="input-group">
-            <label>SUB-INSTRUMENT ADDRESS (MODBUS ID)</label>
-            <input type="number" id="g-modbus-id" class="ctrl-input" value="1">
-        </div>
-        <button class="btn-auth" onclick="authenticateSession()">ตรวจสอบสิทธิ์และเข้าใช้งาน</button>
+<!-- ================================================================ -->
+<!-- LOGIN SCREEN -->
+<!-- ================================================================ -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">
+      <h1>SDU440</h1>
+      <p>IoT Control Center — เข้าสู่ระบบด้วย Device Token</p>
     </div>
+
+    <div class="form-row">
+      <label>Device ID</label>
+      <input type="text" id="l-deviceid" placeholder="เช่น SDU-AABBCCDD">
+      <div class="hint">ดูได้จากหน้า Setup ของ ESP32 (192.168.4.1)</div>
+    </div>
+    <div class="form-row">
+      <label>Token</label>
+      <input type="text" id="l-token" placeholder="AABBCCDD-XXXXXXXX">
+      <div class="hint">Token สร้างอัตโนมัติจาก MAC Address ของบอร์ด</div>
+    </div>
+    <div class="form-row">
+      <label>Password</label>
+      <input type="password" id="l-password" placeholder="รหัสผ่านที่ตั้งไว้ตอน Setup">
+    </div>
+    <div class="form-row">
+      <label>Cloudflare Worker URL</label>
+      <input type="text" id="l-cfurl" placeholder="https://sdu440-worker.your-name.workers.dev">
+      <div class="hint">URL จาก Cloudflare Dashboard</div>
+    </div>
+
+    <button class="btn-login" onclick="doLogin()">🔐 เข้าสู่ระบบ</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
 </div>
 
-<!-- ==============================================
-     หน้าจอที่ 2: แดชบอร์ดหลัก (Dashboard)
-=============================================== -->
-<div id="app-viewport">
-    <nav class="top-nav">
-        <div class="brand-title">
-            SDU440 MONITOR
-            <span class="tenant-pill" id="lbl-tenant">CUSTOMER: companyA / NODE: 1</span>
-        </div>
-        <div style="display: flex; align-items: center; gap: 20px;">
-            <div id="connection-status" style="font-size: 0.85rem; color: var(--danger); font-weight: 500;">
-                ● Server Disconnected
-            </div>
-            <button class="btn-action" style="background:#334155; color:white;" onclick="exitSession()">Logout</button>
-        </div>
-    </nav>
+<!-- ================================================================ -->
+<!-- APP -->
+<!-- ================================================================ -->
+<div id="app">
+<div class="layout">
 
-    <div class="workspace">
-        
-        <!-- แผงตัวเลข 3 ค่า -->
-        <div class="panel-grid">
-            <div class="metric-card pv">
-                <div class="m-lbl">อุณหภูมิปัจจุบัน (PROCESS VALUE)</div>
-                <div class="m-val" id="disp-pv">--</div>
-            </div>
-            <div class="metric-card sv">
-                <div class="m-lbl">ค่าเป้าหมายที่ตั้งไว้ (SET VALUE)</div>
-                <div class="m-val" id="disp-sv">--</div>
-            </div>
-            <div class="metric-card mv">
-                <div class="m-lbl">กำลังเอาต์พุตขับเคลื่อน (OUTPUT MV %)</div>
-                <div class="m-val" id="disp-mv">--</div>
-            </div>
-        </div>
-
-        <div class="dashboard-split">
-            <!-- กราฟแนวโน้ม -->
-            <div style="display: flex; flex-direction: column; gap: 24px;">
-                <div class="content-box" style="flex: 1;">
-                    <div class="box-hdr">
-                        <span>แนวโน้มพารามิเตอร์ระบบแบบเรียลไทม์</span>
-                        <button class="btn-action" onclick="exportCSV()">Export Historical Data (CSV)</button>
-                    </div>
-                    <div style="position: relative; height: 350px;">
-                        <canvas id="liveTrendChart"></canvas>
-                    </div>
-                </div>
-            </div>
-
-            <!-- แผงควบคุมเรจิสเตอร์ -->
-            <div class="content-box">
-                <div class="box-hdr">แผงปรับแต่งค่าเรจิสเตอร์ระบบควบคุม (REGISTERS CONTROL)</div>
-                
-                <div class="config-row">
-                    <div class="config-label">
-                        ค่าเป้าหมายการควบคุม
-                        <small>Set Value (SV)</small>
-                    </div>
-                    <input type="number" id="reg-sv" class="ctrl-input-small">
-                    <button class="btn-action" onclick="commitParameter('sv', 'reg-sv')">Update</button>
-                </div>
-
-                <div class="config-row">
-                    <div class="config-label">
-                        Proportional Band
-                        <small>P Parameter</small>
-                    </div>
-                    <input type="number" id="reg-p" class="ctrl-input-small">
-                    <button class="btn-action" onclick="commitParameter('p', 'reg-p')">Update</button>
-                </div>
-
-                <div class="config-row">
-                    <div class="config-label">
-                        Integral Time
-                        <small>I Parameter</small>
-                    </div>
-                    <input type="number" id="reg-i" class="ctrl-input-small">
-                    <button class="btn-action" onclick="commitParameter('i', 'reg-i')">Update</button>
-                </div>
-
-                <div class="config-row">
-                    <div class="config-label">
-                        Derivative Time
-                        <small>D Parameter</small>
-                    </div>
-                    <input type="number" id="reg-d" class="ctrl-input-small">
-                    <button class="btn-action" onclick="commitParameter('d', 'reg-d')">Update</button>
-                </div>
-
-                <div style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed var(--border-color);">
-                    <div class="config-row" style="margin-bottom: 0;">
-                        <div class="config-label">
-                            ค้นหาฮาร์ดแวร์บนบัส RS485
-                            <small>Hardware Auto-Scan</small>
-                        </div>
-                        <button class="btn-action" style="background: var(--warning);" onclick="triggerDeviceScan()">Scan Bus</button>
-                    </div>
-                </div>
-
-                <!-- ช่องรับสถานะของระบบ (Terminal Box) -->
-                <div class="system-logs" id="terminal-stream">
-                    >> ระบบพร้อมทำงาน กรุณารอการเชื่อมต่อจากเกตเวย์...
-                </div>
-            </div>
-        </div>
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="topbar-logo">SDU440 <span>/ Dashboard</span></div>
+    <div class="topbar-right">
+      <div class="device-chip" id="top-deviceid">—</div>
+      <div class="badge" id="badge-mqtt"><div class="badge-dot"></div><span id="badge-mqtt-txt">MQTT</span></div>
+      <div class="badge" id="badge-sdu"><div class="badge-dot"></div><span id="badge-sdu-txt">SDU440</span></div>
+      <button class="logout-btn" onclick="doLogout()">ออกจากระบบ</button>
     </div>
-</div>
+  </header>
 
-<!-- ==============================================
-     สคริปต์ควบคุมระบบ (JavaScript)
-=============================================== -->
+  <!-- SIDEBAR -->
+  <nav class="sidebar">
+    <div class="nav-section">Dashboard</div>
+    <div class="nav-item active" onclick="showPage('pg-monitor',this)"><span class="nav-icon">📊</span>Monitor</div>
+    <div class="nav-item" onclick="showPage('pg-params',this)"><span class="nav-icon">🎛️</span>Parameters</div>
+    <div class="nav-item" onclick="showPage('pg-tuning',this)"><span class="nav-icon">🛠️</span>PID Tuning</div>
+    <div class="nav-item" onclick="showPage('pg-alarm',this)"><span class="nav-icon">🔔</span>Alarm</div>
+    <div class="nav-section">System</div>
+    <div class="nav-item" onclick="showPage('pg-modbus',this)"><span class="nav-icon">🔌</span>Modbus Config</div>
+    <div class="nav-item" onclick="showPage('pg-debug',this)"><span class="nav-icon">💻</span>Debug</div>
+  </nav>
+
+  <!-- MAIN -->
+  <main class="main">
+
+    <!-- ── MONITOR ── -->
+    <div class="page active" id="pg-monitor">
+      <div class="monitor-row">
+        <div class="monitor-card"><div class="monitor-label">🔥 อุณหภูมิ (PV)</div><div class="monitor-val" id="v-pv" style="color:var(--success)">--</div><div class="monitor-unit">Process Value</div></div>
+        <div class="monitor-card"><div class="monitor-label">🎯 เป้าหมาย (SV)</div><div class="monitor-val" id="v-sv" style="color:var(--accent)">--</div><div class="monitor-unit">Set Value</div></div>
+        <div class="monitor-card"><div class="monitor-label">⚡ เอาต์พุต (MV)</div><div class="monitor-val" id="v-mv" style="color:var(--warn)">--</div><div class="monitor-unit">%</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">
+          📈 กราฟประวัติอุณหภูมิ
+          <div style="margin-left:auto;display:flex;align-items:center;gap:7px;">
+            <span style="font-size:.77rem;color:var(--muted);">Y:</span>
+            <input type="number" id="g-min" placeholder="Min" style="width:58px;">
+            <input type="number" id="g-max" placeholder="Max" style="width:58px;">
+            <button class="btn" onclick="applyScale()">SET</button>
+            <button class="btn-ghost" onclick="clearChart()">Clear</button>
+          </div>
+        </div>
+        <div class="chart-wrap"><canvas id="main-chart"></canvas></div>
+      </div>
+    </div>
+
+    <!-- ── PARAMETERS ── -->
+    <div class="page" id="pg-params">
+      <div class="card">
+        <div class="card-title">🎛️ ค่าพื้นฐาน</div>
+        <div class="param-row"><div class="param-label">Setpoint <small>(SV)</small></div><div class="param-action"><span class="tag" id="v-sv-tag">--</span><input type="number" id="i-sv"><button class="btn" onclick="cmd('sv','i-sv')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Sensor Type <small>(InPt)</small></div><div class="param-action"><span class="tag" id="v-inpt">--</span><select id="i-inpt"><option value="0">K-Type TC</option><option value="1">J-Type TC</option><option value="2">E-Type TC</option><option value="10">Pt100 (JIS)</option><option value="11">Pt100 (DIN)</option></select><button class="btn" onclick="cmd('inpt','i-inpt')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Unit <small>(UnIt)</small></div><div class="param-action"><span class="tag" id="v-unit">--</span><select id="i-unit"><option value="0">°C</option><option value="1">°F</option></select><button class="btn" onclick="cmd('unit','i-unit')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Decimal Point <small>(dP)</small></div><div class="param-action"><span class="tag" id="v-dp">--</span><select id="i-dp"><option value="0">0</option><option value="1">0.0</option><option value="2">0.00</option></select><button class="btn" onclick="cmd('dp','i-dp')">SET</button></div></div>
+        <div class="param-row">
+          <div class="param-label">Scale Hi / Lo <small>(SCH / SCL)</small></div>
+          <div class="param-action">
+            Hi:<span class="tag" id="v-sch">--</span><input type="number" id="i-sch" style="width:58px;"><button class="btn" onclick="cmd('sch','i-sch')">SET</button>
+            Lo:<span class="tag" id="v-scl">--</span><input type="number" id="i-scl" style="width:58px;"><button class="btn" onclick="cmd('scl','i-scl')">SET</button>
+          </div>
+        </div>
+        <div class="param-row"><div class="param-label">Control Action <small>(CACt)</small></div><div class="param-action"><span class="tag" id="v-cact">--</span><select id="i-cact"><option value="0">Reverse (ควบคุมร้อน)</option><option value="1">Direct (ควบคุมเย็น)</option></select><button class="btn" onclick="cmd('cact','i-cact')">SET</button></div></div>
+      </div>
+    </div>
+
+    <!-- ── PID TUNING ── -->
+    <div class="page" id="pg-tuning">
+      <div class="card">
+        <div class="card-title">🛠️ PID Parameters</div>
+        <div class="param-row"><div class="param-label">Proportional Band <small>(P)</small></div><div class="param-action"><span class="tag" id="v-p">--</span><input type="number" id="i-p"><button class="btn" onclick="cmd('p','i-p')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Integral Time <small>(I)</small></div><div class="param-action"><span class="tag" id="v-i">--</span><input type="number" id="i-i"><button class="btn" onclick="cmd('i','i-i')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Derivative Time <small>(D)</small></div><div class="param-action"><span class="tag" id="v-d">--</span><input type="number" id="i-d"><button class="btn" onclick="cmd('d','i-d')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Hysteresis <small>(HyS)</small></div><div class="param-action"><span class="tag" id="v-hys">--</span><input type="number" id="i-hys"><button class="btn" onclick="cmd('hys','i-hys')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Cycle Time <small>(CP)</small></div><div class="param-action"><span class="tag" id="v-cp">--</span><input type="number" id="i-cp"><button class="btn" onclick="cmd('cp','i-cp')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Timer <small>(tIm)</small></div><div class="param-action"><span class="tag" id="v-tim">--</span><input type="number" id="i-tim"><button class="btn" onclick="cmd('tim','i-tim')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Auto-Tuning <small>(AT)</small></div><div class="param-action"><span class="tag" id="v-at">--</span><select id="i-at"><option value="0">Stop</option><option value="1">Start AT</option></select><button class="btn" onclick="cmd('at','i-at')">SET</button></div></div>
+      </div>
+    </div>
+
+    <!-- ── ALARM ── -->
+    <div class="page" id="pg-alarm">
+      <div class="card">
+        <div class="card-title">🔔 Alarm Settings</div>
+        <div class="param-row" style="border-left:3px solid var(--danger);">
+          <div class="param-label">Alarm 1 Mode <small>(ALS1)</small></div>
+          <div class="param-action"><span class="tag" id="v-als1" style="min-width:70px;font-size:.78rem;">--</span>
+            <select id="i-als1"><option value="0">Off</option><option value="1">High</option><option value="2">Standby Hi</option><option value="3">Low</option><option value="4">Standby Lo</option><option value="5">Dev Hi</option><option value="6">Dev Lo</option><option value="7">Deviation</option></select>
+            <button class="btn" onclick="cmd('als1','i-als1')">SET</button></div>
+        </div>
+        <div class="param-row"><div class="param-label">Alarm 1 Value <small>(HyS1)</small></div><div class="param-action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button class="btn" onclick="cmd('hys1','i-hys1')">SET</button></div></div>
+        <div class="param-row" style="border-left:3px solid var(--warn);">
+          <div class="param-label">Alarm 2 Mode <small>(ALS2)</small></div>
+          <div class="param-action"><span class="tag" id="v-als2" style="min-width:70px;font-size:.78rem;">--</span>
+            <select id="i-als2"><option value="0">Off</option><option value="1">High</option><option value="2">Standby Hi</option><option value="3">Low</option><option value="4">Standby Lo</option><option value="5">Dev Hi</option><option value="6">Dev Lo</option><option value="7">Deviation</option></select>
+            <button class="btn" onclick="cmd('als2','i-als2')">SET</button></div>
+        </div>
+        <div class="param-row"><div class="param-label">Alarm 2 Value <small>(HyS2)</small></div><div class="param-action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button class="btn" onclick="cmd('hys2','i-hys2')">SET</button></div></div>
+      </div>
+    </div>
+
+    <!-- ── MODBUS CONFIG ── -->
+    <div class="page" id="pg-modbus">
+      <div class="alert alert-info">💡 ESP32 จะ Hot Swap Address และยืนยันก่อนบันทึก — Rollback อัตโนมัติถ้าไม่ตอบสนอง</div>
+
+      <div class="card">
+        <div class="card-title">🔌 สถานะ Modbus</div>
+        <div class="addr-display">
+          <div class="addr-num" id="disp-addr">--</div>
+          <div style="flex:1;"><div style="font-size:.73rem;color:var(--muted);">Modbus Address</div><div id="disp-addr-status" style="font-size:.85rem;">รอข้อมูล...</div></div>
+          <div class="tag" id="disp-mode" style="padding:6px 14px;font-size:.88rem;">--</div>
+        </div>
+        <div class="console" id="addr-log">>> รอรับข้อมูล Modbus</div>
+      </div>
+
+      <div class="cfg-grid">
+        <!-- Address -->
+        <div class="card">
+          <div class="card-title">📍 เปลี่ยน Modbus Address</div>
+          <div class="cfg-row"><label>Address ใหม่ (1–247)</label><input type="number" id="cfg-addr" min="1" max="247" placeholder="1–247"><div class="hint">ESP32 จะ Verify ก่อนบันทึก</div></div>
+          <div class="cfg-row"><label>บันทึกถาวร?</label><select id="cfg-addr-save"><option value="true">✅ บันทึก NVS (คงอยู่หลัง reboot)</option><option value="false">⚡ ชั่วคราว (RAM)</option></select></div>
+          <button class="btn btn-full" onclick="sendAddress()">เปลี่ยน Address</button>
+        </div>
+
+        <!-- Mode -->
+        <div class="card">
+          <div class="card-title">🔀 Modbus Protocol</div>
+          <div class="cfg-row"><label>โหมด Protocol</label><select id="cfg-mode" style="width:100%;"><option value="ASCII">Modbus ASCII</option><option value="RTU">Modbus RTU</option></select><div class="hint">ต้องตรงกับการตั้งค่าบน SDU440</div></div>
+          <button class="btn btn-full" onclick="sendMode()" style="margin-top:12px;">เปลี่ยนโหมด</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── DEBUG ── -->
+    <div class="page" id="pg-debug">
+      <div class="card">
+        <div class="card-title">💻 Debug Console</div>
+        <div class="param-row">
+          <div class="param-label">ยิงตรง Register</div>
+          <div class="param-action">
+            Reg:<input type="text" id="d-reg" value="001D" style="width:54px;">
+            Val:<input type="number" id="d-val" value="50" style="width:54px;">
+            <button class="btn" onclick="sendDebug()">SEND</button>
+          </div>
+        </div>
+        <div class="console" id="debug-log">>> Debug Console</div>
+        <div style="margin-top:8px;display:flex;gap:8px;">
+          <button class="btn-ghost" onclick="clearLog()">Clear</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">📡 MQTT Inspector</div>
+        <div class="console" id="mqtt-log">>> รอรับข้อความ...</div>
+      </div>
+    </div>
+
+  </main>
+</div>
+</div><!-- /app -->
+
 <script>
-    let TENANT_ID = "";
-    let GATEWAY_UID = "";
-    let SUB_INSTRUMENT_ID = "";
-    let mqttClient = null;
-    let historyRecords = [];
+// ================================================================
+// STATE
+// ================================================================
+let STATE = {
+  deviceId: '', token: '', password: '', cfUrl: '',
+  currentSV: 0, currentAddr: 1,
+};
+let mqttClient = null;
 
-    // การตั้งค่า Chart.js
-    const ctx = document.getElementById('liveTrendChart').getContext('2d');
-    const trendChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: [],
-            datasets: [
-                {
-                    label: 'PV (Temp)',
-                    borderColor: '#10b981', // เขียว
-                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                    borderWidth: 2,
-                    data: [],
-                    fill: true,
-                    tension: 0.3
-                },
-                {
-                    label: 'SV (Target)',
-                    borderColor: '#38bdf8', // ฟ้า
-                    borderWidth: 2,
-                    borderDash: [5, 5],
-                    data: [],
-                    tension: 0.3
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { labels: { color: '#f1f5f9' } }
-            },
-            scales: {
-                x: { grid: { color: '#1e2640' }, ticks: { color: '#64748b' } },
-                y: { grid: { color: '#1e2640' }, ticks: { color: '#64748b' }, beginAtZero: true }
-            }
-        }
+// ── LocalStorage Session ──
+function loadSession() {
+  const s = localStorage.getItem('sdu440_session');
+  if (s) { Object.assign(STATE, JSON.parse(s)); return true; }
+  return false;
+}
+function saveSession() {
+  localStorage.setItem('sdu440_session', JSON.stringify(STATE));
+}
+
+// ================================================================
+// LOGIN
+// ================================================================
+async function doLogin() {
+  const deviceId = document.getElementById('l-deviceid').value.trim();
+  const token    = document.getElementById('l-token').value.trim();
+  const password = document.getElementById('l-password').value.trim();
+  const cfUrl    = document.getElementById('l-cfurl').value.trim().replace(/\/$/, '');
+  const errEl    = document.getElementById('login-err');
+
+  if (!deviceId || !token || !password || !cfUrl) {
+    showErr('กรุณากรอกข้อมูลให้ครบทุกช่อง'); return;
+  }
+
+  try {
+    const r = await fetch(`${cfUrl}/verify/${deviceId}`, {
+      headers: { 'X-Token': token, 'X-Password': password }
     });
+    const j = await r.json();
+    if (!j.ok) { showErr('Token หรือ Password ไม่ถูกต้อง'); return; }
 
-    // ฟังก์ชันอัปเดต Terminal Log
-    function appendLog(msg) {
-        const c = document.getElementById('terminal-stream');
-        c.innerHTML += `<div>[${new Date().toLocaleTimeString()}] ${msg}</div>`;
-        c.scrollTop = c.scrollHeight;
+    STATE = { deviceId, token, password, cfUrl, currentSV: 0, currentAddr: 1 };
+    saveSession();
+    startApp();
+  } catch(e) {
+    showErr('เชื่อมต่อ Cloudflare Worker ไม่ได้: ' + e.message);
+  }
+
+  function showErr(msg) {
+    errEl.style.display = 'block';
+    errEl.textContent   = '❌ ' + msg;
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('sdu440_session');
+  if (mqttClient && mqttClient.isConnected()) mqttClient.disconnect();
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ================================================================
+// START APP
+// ================================================================
+function startApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('top-deviceid').textContent = STATE.deviceId;
+  connectMQTT();
+  fetchInitialData();
+}
+
+// ================================================================
+// CHART
+// ================================================================
+const chart = new Chart(document.getElementById('main-chart').getContext('2d'), {
+  type: 'line',
+  data: {
+    labels: [],
+    datasets: [
+      { label:'PV', data:[], borderColor:'#4ade80', backgroundColor:'rgba(74,222,128,.05)', tension:.3, pointRadius:2 },
+      { label:'SV', data:[], borderColor:'#38bdf8', backgroundColor:'rgba(56,189,248,.05)', tension:.3, pointRadius:2, borderDash:[5,4] }
+    ]
+  },
+  options: {
+    responsive:true, maintainAspectRatio:false,
+    plugins:{ legend:{ labels:{ color:'#94a3b8', font:{family:'JetBrains Mono',size:11} } } },
+    scales:{
+      y:{ grid:{color:'#1f2937'}, ticks:{color:'#6b7280'} },
+      x:{ grid:{color:'#1f2937'}, ticks:{color:'#6b7280', maxTicksLimit:8} }
     }
+  }
+});
+function pushChart(pv, sv) {
+  if (chart.data.labels.length > 60) { chart.data.labels.shift(); chart.data.datasets[0].data.shift(); chart.data.datasets[1].data.shift(); }
+  chart.data.labels.push(new Date().toLocaleTimeString());
+  chart.data.datasets[0].data.push(pv);
+  chart.data.datasets[1].data.push(sv);
+  chart.update('none');
+}
+function applyScale() {
+  const mn = document.getElementById('g-min').value;
+  const mx = document.getElementById('g-max').value;
+  if (mn!=='') chart.options.scales.y.min=parseFloat(mn); else delete chart.options.scales.y.min;
+  if (mx!=='') chart.options.scales.y.max=parseFloat(mx); else delete chart.options.scales.y.max;
+  chart.update();
+}
+function clearChart() { chart.data.labels=[]; chart.data.datasets.forEach(d=>d.data=[]); chart.update(); }
 
-    // 1. ฟังก์ชันเมื่อกดปุ่ม "ตรวจสอบสิทธิ์และเข้าใช้งาน"
-    function authenticateSession() {
-        TENANT_ID = document.getElementById('g-tenant').value.trim();
-        GATEWAY_UID = document.getElementById('g-device').value.trim();
-        SUB_INSTRUMENT_ID = document.getElementById('g-modbus-id').value.trim();
+// ================================================================
+// CLOUDFLARE — โหลดข้อมูลเริ่มต้น
+// ================================================================
+async function fetchInitialData() {
+  try {
+    const r = await fetch(`${STATE.cfUrl}/data/${STATE.deviceId}`, {
+      headers: { 'X-Token': STATE.token, 'X-Password': STATE.password }
+    });
+    if (!r.ok) return;
+    const d = await r.json();
+    updateUI(d);
+    logInfo(`โหลดข้อมูลล่าสุดจาก Cloud — updated: ${d.updatedAt||'-'}`);
+  } catch(e) { logWarn('Cloud: ' + e.message); }
+}
 
-        if(!TENANT_ID || !GATEWAY_UID || !SUB_INSTRUMENT_ID) {
-            alert("กรุณากรอกข้อมูลให้ครบถ้วนก่อนเข้าใช้งาน");
-            return;
-        }
+// ================================================================
+// MQTT
+// ================================================================
+function T(dir, key) { return `sdu440/${STATE.deviceId}/${dir}/${key}`; }
 
-        // อัปเดตชื่อผู้ใช้มุมซ้ายบน
-        document.getElementById('lbl-tenant').textContent = `CUSTOMER: ${TENANT_ID} / NODE: ${SUB_INSTRUMENT_ID}`;
-        
-        // สลับหน้าจอ
-        document.getElementById('gate-viewport').style.display = 'none';
-        document.getElementById('app-viewport').style.display = 'flex';
-        
-        // เริ่มต่อเซิร์ฟเวอร์
-        initMqtt();
-    }
+function connectMQTT() {
+  const cid = 'WebSDU-' + Math.floor(Math.random()*99999);
+  mqttClient = new Paho.MQTT.Client('broker.hivemq.com', 8884, cid);
+  mqttClient.onConnectionLost = () => { setBadge('mqtt',false,'MQTT: หลุด'); setTimeout(connectMQTT,3000); };
+  mqttClient.onMessageArrived = onMqttMessage;
+  mqttClient.connect({
+    useSSL: true, timeout: 10,
+    onSuccess: () => {
+      setBadge('mqtt', true, 'MQTT: OK');
+      logInfo(`Connected → sdu440/${STATE.deviceId}/#`);
+      mqttClient.subscribe(`sdu440/${STATE.deviceId}/telemetry/#`);
+    },
+    onFailure: (e) => { setBadge('mqtt',false,'MQTT: Error'); logErr(e.errorMessage); setTimeout(connectMQTT,5000); }
+  });
+}
 
-    // 2. ฟังก์ชันเริ่มเชื่อมต่อ MQTT Broker
-    function initMqtt() {
-        // สร้างรหัส Client ID แบบสุ่มเพื่อให้เปิดได้หลายหน้าจอพร้อมกัน
-        const webClientId = "WebClient_" + Math.random().toString(16).substr(2, 8);
-        
-        // ต่อเข้า HiveMQ Public Broker แบบ WebSocket Secure (WSS)
-        mqttClient = new Paho.MQTT.Client("broker.hivemq.com", 8884, webClientId);
+const INPT_NAMES = ["K-Type TC","J-Type TC","E-Type TC","N-Type TC","C-Type TC","T-Type TC","K-Type 0.1","R-Type","S-Type","B-Type","JIS Pt100","DIN Pt100"];
+const AL_NAMES   = ["Off","High","Standby Hi","Low","Standby Lo","Dev Hi","Dev Lo","Deviation"];
 
-        // เมื่อมีข้อความหลั่งไหลเข้ามาจากบอร์ด ESP32
-        mqttClient.onMessageArrived = (msg) => {
-            const topic = msg.destinationName;
-            const payload = msg.payloadString;
-            const baseTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}_${SUB_INSTRUMENT_ID}/telemetry/`;
+function onMqttMessage(m) {
+  const t = m.destinationName;
+  const p = m.payloadString;
+  // Inspector
+  const ml = document.getElementById('mqtt-log');
+  ml.innerHTML += `<span class="log-info">${t.split('/').slice(-2).join('/')}</span>: ${p}\n`;
+  ml.scrollTop = ml.scrollHeight;
 
-            if (topic.startsWith(baseTopic)) {
-                const metric = topic.replace(baseTopic, '');
-                
-                // อัปเดตหน้าจอตามค่าที่รับมา
-                if (metric === "pv") {
-                    document.getElementById('disp-pv').textContent = payload;
-                    updateChart(parseFloat(payload), null);
-                }
-                else if (metric === "sv") {
-                    document.getElementById('disp-sv').textContent = payload;
-                    document.getElementById('reg-sv').value = payload; // ดึงค่าปัจจุบันมาโชว์ในช่องปรับแต่งด้วย
-                    updateChart(null, parseFloat(payload));
-                }
-                else if (metric === "mv") {
-                    document.getElementById('disp-mv').textContent = payload;
-                }
-                else if (metric === "p") document.getElementById('reg-p').value = payload;
-                else if (metric === "i") document.getElementById('reg-i').value = payload;
-                else if (metric === "d") document.getElementById('reg-d').value = payload;
-            }
-        };
+  if (t===T('telemetry','status')) setBadge('sdu', p==='true', p==='true'?'SDU440: Online':'SDU440: Error');
+  else if (t===T('telemetry','pv'))  { set('v-pv',p); pushChart(parseInt(p)||0, STATE.currentSV); }
+  else if (t===T('telemetry','sv'))  { STATE.currentSV=parseInt(p)||0; set('v-sv',p); set('v-sv-tag',p); }
+  else if (t===T('telemetry','mv'))  set('v-mv', p+' %');
+  else if (t===T('telemetry','p'))   set('v-p',  (parseFloat(p)/10).toFixed(1));
+  else if (t===T('telemetry','i'))   set('v-i',  p);
+  else if (t===T('telemetry','d'))   set('v-d',  p);
+  else if (t===T('telemetry','hys')) set('v-hys',p);
+  else if (t===T('telemetry','cp'))  set('v-cp', p);
+  else if (t===T('telemetry','tim')) set('v-tim',p);
+  else if (t===T('telemetry','at'))  set('v-at', p);
+  else if (t===T('telemetry','inpt')) set('v-inpt', INPT_NAMES[parseInt(p)]||p);
+  else if (t===T('telemetry','unit')) set('v-unit', parseInt(p)===0?'°C':'°F');
+  else if (t===T('telemetry','dp'))  set('v-dp',  p);
+  else if (t===T('telemetry','sch')) set('v-sch', p);
+  else if (t===T('telemetry','scl')) set('v-scl', p);
+  else if (t===T('telemetry','als1')) set('v-als1', AL_NAMES[parseInt(p)]||p);
+  else if (t===T('telemetry','hys1')) set('v-hys1',p);
+  else if (t===T('telemetry','als2')) set('v-als2', AL_NAMES[parseInt(p)]||p);
+  else if (t===T('telemetry','hys2')) set('v-hys2',p);
+  else if (t===T('telemetry','cact')) set('v-cact', parseInt(p)===0?'Rev':'Dir');
+  else if (t===T('telemetry','mode')) {
+    set('disp-mode', p);
+    document.getElementById('disp-mode').style.color = p==='RTU'?'var(--warn)':'var(--accent)';
+  }
+  else if (t===T('telemetry','address')) {
+    try {
+      const j=JSON.parse(p);
+      STATE.currentAddr=j.address;
+      set('disp-addr', j.address);
+      const ok=j.verify!==false;
+      const el=document.getElementById('disp-addr-status');
+      el.textContent = ok?'✅ Verified':'❌ ไม่ตอบสนอง (Rollback)';
+      el.className   = ok?'addr-ok':'addr-err';
+      const log=document.getElementById('addr-log');
+      log.innerHTML += `[${new Date().toLocaleTimeString()}] addr=${j.address} ok=${ok}${j.saved?' [NVS saved]':''}\n`;
+      log.scrollTop = log.scrollHeight;
+    } catch(e){}
+  }
+}
 
-        // เมื่อการเชื่อมต่อขาดหาย
-        mqttClient.onConnectionLost = (responseObject) => {
-            document.getElementById('connection-status').textContent = "● Server Disconnected";
-            document.getElementById('connection-status').style.color = "var(--danger)";
-            appendLog("Connection lost. Retrying...");
-            setTimeout(initMqtt, 5000); // พยายามต่อใหม่ใน 5 วินาที
-        };
+function updateUI(d) {
+  const m = { 'v-pv':d.pv,'v-sv':d.sv,'v-sv-tag':d.sv,'v-mv':d.mv?(d.mv+'%'):null,
+    'v-p':d.p,'v-i':d.i,'v-d':d.d,'v-hys':d.hys,'v-cp':d.cp,'v-tim':d.tim,'v-at':d.at,
+    'v-inpt':d.inpt,'v-unit':d.unit,'v-dp':d.dp,'v-sch':d.sch,'v-scl':d.scl,
+    'v-als1':d.als1,'v-hys1':d.hys1,'v-als2':d.als2,'v-hys2':d.hys2,'v-cact':d.cact };
+  for(const [id,val] of Object.entries(m)) if(val!==undefined&&val!==null) set(id,val);
+}
 
-        // สั่งเชื่อมต่อ
-        mqttClient.connect({
-            useSSL: true,
-            onSuccess: () => {
-                document.getElementById('connection-status').textContent = "● Server Connected";
-                document.getElementById('connection-status').style.color = "var(--success)";
-                
-                // Subscribe รอรับค่าจากฮาร์ดแวร์โดยตรง
-                const subTopic = `sdu440/${TENANT_ID}/${GATEWAY_UID}_${SUB_INSTRUMENT_ID}/telemetry/+`;
-                mqttClient.subscribe(subTopic);
-                
-                appendLog(`เชื่อมต่อเซิร์ฟเวอร์สำเร็จ. กำลังรอข้อมูลจาก ${GATEWAY_UID}...`);
-            },
-            onFailure: (err) => {
-                appendLog("เชื่อมต่อล้มเหลว: " + err.errorMessage);
-            }
-        });
-    }
+// ================================================================
+// SEND COMMANDS (MQTT → ESP32)
+// ================================================================
+function pub(topic, payload) {
+  if (!mqttClient||!mqttClient.isConnected()) { logErr('MQTT ไม่ได้เชื่อมต่อ'); return; }
+  const msg = new Paho.MQTT.Message(String(payload));
+  msg.destinationName = topic;
+  mqttClient.send(msg);
+  logInfo(`→ ${topic.split('/').slice(-2).join('/')}: ${payload}`);
+}
 
-    // 3. ฟังก์ชันอัปเดตกราฟ
-    function updateChart(pv, sv) {
-        const now = new Date().toLocaleTimeString();
-        let shouldUpdate = false;
+function cmd(key, inputId) {
+  const val = document.getElementById(inputId).value;
+  if (val==='') { logErr('กรุณากรอกค่า'); return; }
+  pub(T('command',key), val);
+}
 
-        if (pv !== null) {
-            if(trendChart.data.labels.length > 20) trendChart.data.labels.shift();
-            trendChart.data.labels.push(now);
-            
-            if(trendChart.data.datasets[0].data.length > 20) trendChart.data.datasets[0].data.shift();
-            trendChart.data.datasets[0].data.push(pv);
-            shouldUpdate = true;
-        }
+function sendDebug() {
+  pub(T('command','debug'), `${document.getElementById('d-reg').value},${document.getElementById('d-val').value}`);
+}
 
-        if (sv !== null) {
-            if(trendChart.data.datasets[1].data.length > 20) trendChart.data.datasets[1].data.shift();
-            trendChart.data.datasets[1].data.push(sv);
-            shouldUpdate = true;
-        }
+function sendAddress() {
+  const addr = parseInt(document.getElementById('cfg-addr').value);
+  const save = document.getElementById('cfg-addr-save').value==='true';
+  if (!addr||addr<1||addr>247) { logErr('Address ต้องอยู่ 1–247'); return; }
+  pub(T('command','set_address'), JSON.stringify({address:addr,save}));
+  logInfo(`Hot Swap → address=${addr} save=${save}`);
+}
 
-        if(shouldUpdate) trendChart.update();
-    }
+function sendMode() {
+  pub(T('command','mode'), document.getElementById('cfg-mode').value);
+}
 
-    // 4. ฟังก์ชันส่งค่า (Write Command) กลับไปที่บอร์ด ESP32
-    function commitParameter(pName, inputId) {
-        if (!mqttClient || !mqttClient.isConnected()) {
-            alert("เซิร์ฟเวอร์ยังไม่เชื่อมต่อ!");
-            return;
-        }
+// ================================================================
+// UI HELPERS
+// ================================================================
+function set(id, val) { const el=document.getElementById(id); if(el) el.textContent=val; }
+function setBadge(which, ok, txt) {
+  const el = document.getElementById(`badge-${which}`);
+  el.className = 'badge ' + (ok?'ok':'err');
+  document.getElementById(`badge-${which}-txt`).textContent = txt;
+}
+function showPage(id, el) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if(el) el.classList.add('active');
+}
+function logInfo(msg) { appendLog(`<span class="log-info">[INFO]</span> ${msg}`); }
+function logErr(msg)  { appendLog(`<span class="log-err">[ERR]</span>  ${msg}`); }
+function logWarn(msg) { appendLog(`<span class="log-warn">[WARN]</span> ${msg}`); }
+function appendLog(html) {
+  const el=document.getElementById('debug-log');
+  el.innerHTML+=html+'\n'; el.scrollTop=el.scrollHeight;
+}
+function clearLog() { document.getElementById('debug-log').innerHTML='>> Log cleared\n'; }
 
-        const val = document.getElementById(inputId).value;
-        if(val === "") return;
-
-        // รูปแบบ JSON: {"addr": 1, "reg": "sv", "val": 100}
-        const payloadObj = {
-            addr: parseInt(SUB_INSTRUMENT_ID),
-            reg: pName,
-            val: parseInt(val)
-        };
-
-        const msg = new Paho.MQTT.Message(JSON.stringify(payloadObj));
-        msg.destinationName = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/write_param`;
-        msg.qos = 1;
-        
-        mqttClient.send(msg);
-        appendLog(`>> ส่งคำสั่งอัปเดตค่า ${pName.toUpperCase()} = ${val} แล้ว`);
-    }
-
-    // 5. ฟังก์ชันสั่งบอร์ดสแกนหาฮาร์ดแวร์
-    function triggerDeviceScan() {
-        if (!mqttClient || !mqttClient.isConnected()) return;
-        const msg = new Paho.MQTT.Message("TRIGGER");
-        msg.destinationName = `sdu440/${TENANT_ID}/${GATEWAY_UID}/command/scan`;
-        mqttClient.send(msg);
-        appendLog(">> สั่งสแกนหาอุปกรณ์บนบัส RS485...");
-    }
-
-    // 6. ฟังก์ชันออกจากระบบ
-    function exitSession() {
-        if(mqttClient && mqttClient.isConnected()) {
-            mqttClient.disconnect();
-        }
-        location.reload();
-    }
-
-    // ฟังก์ชัน Export CSV (จำลอง)
-    function exportCSV() {
-        alert("ระบบกำลังรวบรวมข้อมูลเพื่อ Export เป็น CSV...");
-    }
+// ================================================================
+// INIT
+// ================================================================
+window.onload = () => {
+  if (loadSession() && STATE.deviceId && STATE.token && STATE.password && STATE.cfUrl) {
+    // Auto-login จาก session
+    document.getElementById('l-deviceid').value = STATE.deviceId;
+    document.getElementById('l-token').value    = STATE.token;
+    document.getElementById('l-cfurl').value    = STATE.cfUrl;
+    startApp();
+  }
+};
 </script>
-
 </body>
 </html>
