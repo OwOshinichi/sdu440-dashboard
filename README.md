@@ -1,0 +1,1206 @@
+[index.html](https://github.com/user-attachments/files/30180125/index.html)
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SDU440 Control Center</title>
+
+<!-- Firebase SDK (compat — ใช้งานง่ายแบบ script tag ตรง ไม่ต้อง build) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Prompt:wght@300;400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#07090f; --surface:#0d1117; --card:#111827;
+  --border:#1f2937; --border2:#374151;
+  --text:#e2e8f0; --muted:#6b7280;
+  --accent:#38bdf8; --accent2:#0ea5e9;
+  --success:#4ade80; --danger:#f87171; --warn:#fbbf24;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Prompt',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+
+/* ===== LOGIN / SIGNUP ===== */
+#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
+.auth-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:400px}
+.auth-logo{text-align:center;margin-bottom:24px}
+.auth-logo h1{font-size:1.6rem;color:var(--accent);font-family:'JetBrains Mono',monospace}
+.auth-logo p{color:var(--muted);font-size:.85rem;margin-top:4px}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:.82rem;color:#94a3b8;margin-bottom:5px}
+.form-row input{width:100%;background:var(--bg);border:1px solid var(--border2);color:#fff;padding:10px 12px;border-radius:8px;font-size:.9rem}
+.form-row input:focus{outline:none;border-color:var(--accent)}
+.btn-auth{width:100%;background:var(--accent);color:#000;border:none;padding:12px;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:6px}
+.btn-auth:hover{background:var(--accent2)}
+.auth-msg{border-radius:8px;padding:10px 14px;font-size:.83rem;margin-top:12px;display:none}
+.auth-msg.err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--danger)}
+.auth-msg.ok{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:var(--success)}
+.auth-tabs{display:flex;gap:6px;margin-bottom:20px;background:var(--bg);border-radius:8px;padding:4px}
+.auth-tab{flex:1;text-align:center;padding:8px;border-radius:6px;cursor:pointer;font-size:.85rem;color:var(--muted);transition:all .2s}
+.auth-tab.active{background:var(--accent);color:#000;font-weight:700}
+.company-badge{display:inline-block;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:var(--accent);border-radius:6px;padding:3px 10px;font-size:.78rem;margin-bottom:14px;width:100%;text-align:center}
+.role-badge{display:inline-block;border-radius:4px;padding:2px 8px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.role-admin{background:rgba(248,113,113,.15);color:#f87171}
+.role-manager{background:rgba(251,191,36,.15);color:#fbbf24}
+.role-operator{background:rgba(74,222,128,.15);color:#4ade80}
+.role-viewer{background:rgba(148,163,184,.15);color:#94a3b8}
+.audit-row{display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--border);font-size:.78rem}
+.audit-time{color:var(--muted);min-width:80px;font-family:monospace}
+.audit-user{color:var(--accent);min-width:120px}
+.audit-action{color:var(--text)}
+.alert-row{display:flex;align-items:center;gap:10px;padding:8px 12px;background:var(--bg);border-radius:8px;margin-bottom:6px}
+.alert-active{border-left:3px solid var(--danger)}
+.alert-ok{border-left:3px solid var(--success)}
+.perm-lock{color:var(--muted);cursor:not-allowed;opacity:.5}
+
+/* ===== APP ===== */
+#app{display:none}
+.layout{display:grid;grid-template-columns:240px 1fr;grid-template-rows:54px 1fr;min-height:100vh}
+.topbar{grid-column:1/-1;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px}
+.topbar-logo{font-family:'JetBrains Mono',monospace;font-size:.95rem;font-weight:700;color:var(--accent)}
+.topbar-logo span{color:var(--muted);font-weight:400}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.user-chip{font-size:.78rem;color:var(--muted)}
+.badge{display:flex;align-items:center;gap:6px;padding:4px 11px;border-radius:20px;font-size:.75rem;font-weight:600;border:1px solid var(--border2);background:var(--card)}
+.badge-dot{width:6px;height:6px;border-radius:50%;background:var(--muted)}
+.badge.ok .badge-dot{background:var(--success);box-shadow:0 0 5px var(--success)}
+.badge.err .badge-dot{background:var(--danger)}
+.logout-btn{background:none;border:1px solid var(--border2);color:var(--muted);padding:4px 11px;border-radius:6px;cursor:pointer;font-size:.78rem}
+.logout-btn:hover{color:var(--danger);border-color:var(--danger)}
+
+.sidebar{background:var(--surface);border-right:1px solid var(--border);padding:14px 10px;display:flex;flex-direction:column;gap:3px;overflow-y:auto}
+.nav-section{font-size:.67rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);padding:12px 10px 4px}
+.nav-item{display:flex;align-items:center;gap:9px;padding:8px 11px;border-radius:7px;cursor:pointer;font-size:.86rem;color:var(--muted);border:1px solid transparent}
+.nav-item:hover{background:var(--card);color:var(--text)}
+.nav-item.active{background:rgba(56,189,248,.1);color:var(--accent);border-color:rgba(56,189,248,.2)}
+.nav-icon{width:18px;text-align:center;font-size:.95rem}
+
+.main{overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
+.page{display:none;flex-direction:column;gap:16px}
+.page.active{display:flex}
+
+/* Device selector */
+.device-select-row{display:flex;align-items:center;gap:10px;}
+.device-select-row select{flex:1;background:var(--card);border:1px solid var(--border2);color:#fff;padding:9px 12px;border-radius:8px;font-size:.88rem}
+.device-select-row button{background:var(--card);border:1px solid var(--border2);color:var(--text);padding:9px 14px;border-radius:8px;cursor:pointer;font-size:.85rem}
+.device-select-row button:hover{border-color:var(--accent);color:var(--accent)}
+
+.monitor-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.monitor-card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:16px 18px}
+.monitor-label{font-size:.73rem;color:var(--muted);margin-bottom:5px}
+.monitor-val{font-family:'JetBrains Mono',monospace;font-size:2.4rem;font-weight:700;line-height:1}
+.monitor-unit{font-size:.78rem;color:var(--muted);margin-top:3px}
+
+.card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:18px}
+.card-title{font-size:.87rem;font-weight:600;color:#94a3b8;display:flex;align-items:center;gap:7px;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border)}
+
+.param-row{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-radius:7px;background:var(--bg);border:1px solid var(--border);margin-bottom:7px;gap:10px}
+.param-label{font-size:.84rem;color:#cbd5e1;flex:1}
+.param-label small{display:block;font-size:.71rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
+.param-action{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.tag{font-family:'JetBrains Mono',monospace;background:#1a2234;border:1px solid var(--border2);padding:3px 9px;border-radius:4px;font-size:.84rem;min-width:50px;text-align:center;color:#94a3b8}
+
+input[type=number],input[type=text],select{background:#0d1117;border:1px solid var(--border2);color:#fff;padding:6px 8px;border-radius:6px;font-family:'JetBrains Mono',monospace;font-size:.84rem}
+input[type=number]:focus,input[type=text]:focus,select:focus{outline:none;border-color:var(--accent)}
+input[type=number]{width:70px;text-align:center}
+select{cursor:pointer;font-family:'Prompt',sans-serif}
+.btn{background:var(--accent);color:#000;border:none;padding:6px 13px;border-radius:6px;font-weight:700;cursor:pointer;font-size:.81rem;white-space:nowrap}
+.btn:hover{background:var(--accent2)}
+.btn-full{width:100%;padding:10px;font-size:.9rem;margin-top:4px}
+
+.cfg-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.addr-display{display:flex;align-items:center;gap:12px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px 15px;margin-bottom:11px}
+.addr-num{font-family:'JetBrains Mono',monospace;font-size:2rem;font-weight:700;color:var(--accent);min-width:44px;text-align:center}
+.addr-ok{color:var(--success)} .addr-err{color:var(--danger)}
+
+.console{background:#03040a;border:1px solid var(--border);border-radius:6px;padding:10px 12px;font-family:'JetBrains Mono',monospace;font-size:.77rem;height:120px;overflow-y:auto;color:var(--success);line-height:1.7}
+.log-err{color:var(--danger)} .log-info{color:var(--accent)} .log-warn{color:var(--warn)}
+.alert{padding:9px 13px;border-radius:8px;font-size:.82rem;display:flex;align-items:center;gap:7px;border:1px solid}
+.alert-info{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.2);color:var(--accent)}
+
+.empty-state{text-align:center;padding:40px 20px;color:var(--muted)}
+.empty-state .icon{font-size:2.5rem;margin-bottom:10px}
+
+@media(max-width:820px){
+  .layout{grid-template-columns:1fr}
+  .sidebar{display:none}
+  .monitor-row{grid-template-columns:1fr}
+  .cfg-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<!-- ================================================================ -->
+<!-- AUTH SCREEN -->
+<!-- ================================================================ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <div class="auth-logo">
+      <h1>SDU440</h1>
+      <p>IoT Control Center</p>
+    </div>
+
+    <!-- Tabs -->
+    <div class="auth-tabs">
+      <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">เข้าสู่ระบบ</div>
+      <div class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">สมัครสมาชิก</div>
+    </div>
+
+    <!-- Login Form -->
+    <div id="form-login">
+      <div class="form-row"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"></div>
+      <div class="form-row"><label>Password</label><input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"></div>
+      <button class="btn-auth" onclick="doLogin()">เข้าสู่ระบบ</button>
+    </div>
+
+    <!-- Signup Form -->
+    <div id="form-signup" style="display:none;">
+      <div class="form-row">
+        <label>ชื่อบริษัท / องค์กร</label>
+        <input type="text" id="signup-company" placeholder="เช่น บริษัท ABC จำกัด" autocomplete="organization">
+      </div>
+      <div class="form-row"><label>Email</label><input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email"></div>
+      <div class="form-row"><label>Password (อย่างน้อย 6 ตัวอักษร)</label><input type="password" id="signup-password" placeholder="••••••••"></div>
+      <div class="form-row"><label>ยืนยัน Password</label><input type="password" id="signup-password2" placeholder="••••••••"></div>
+      <div id="signup-quota" style="display:none;" class="company-badge">📊 ใช้ไปแล้ว <span id="quota-used">0</span>/5 บัญชี</div>
+      <button class="btn-auth" onclick="doSignup()">สมัครสมาชิก</button>
+    </div>
+
+    <div class="auth-msg" id="auth-msg"></div>
+  </div>
+</div>
+
+<!-- ================================================================ -->
+<!-- APP -->
+<!-- ================================================================ -->
+<div id="app">
+<div class="layout">
+
+  <header class="topbar">
+    <div class="topbar-logo">SDU440 <span>/ Dashboard</span></div>
+    <div class="topbar-right">
+      <span class="user-chip" id="user-email">—</span>
+      <div class="badge" id="badge-fb"><div class="badge-dot"></div><span id="badge-fb-txt">Firebase</span></div>
+      <div class="badge" id="badge-sdu"><div class="badge-dot"></div><span id="badge-sdu-txt">SDU440</span></div>
+      <button class="logout-btn" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <nav class="sidebar">
+    <div class="nav-section">Dashboard</div>
+    <div class="nav-item active" onclick="showPage('pg-monitor',this)"><span class="nav-icon">📊</span>Monitor</div>
+    <div class="nav-item" onclick="showPage('pg-params',this)"><span class="nav-icon">🎛️</span>Parameters</div>
+    <div class="nav-item" onclick="showPage('pg-tuning',this)"><span class="nav-icon">🛠️</span>PID Tuning</div>
+    <div class="nav-item" onclick="showPage('pg-alarm',this)"><span class="nav-icon">🔔</span>Alarm</div>
+    <div class="nav-section">System</div>
+    <div class="nav-item" onclick="showPage('pg-modbus',this)"><span class="nav-icon">🔌</span>Modbus Config</div>
+    <div class="nav-item" onclick="showPage('pg-devices',this)"><span class="nav-icon">📟</span>จัดการบอร์ด</div>
+    <div class="nav-item" onclick="showPage('pg-debug',this)"><span class="nav-icon">💻</span>Debug</div>
+    <div class="nav-section">Enterprise</div>
+    <div class="nav-item" id="nav-users" onclick="showPage('pg-users',this)"><span class="nav-icon">👥</span>จัดการผู้ใช้</div>
+    <div class="nav-item" id="nav-audit" onclick="showPage('pg-audit',this)"><span class="nav-icon">📋</span>Audit Log</div>
+    <div class="nav-item" id="nav-alerts" onclick="showPage('pg-alerts',this)"><span class="nav-icon">🚨</span>Alert Rules</div>
+    <div class="nav-item" onclick="exportCSV()"><span class="nav-icon">📥</span>Export CSV</div>
+  </nav>
+
+  <main class="main">
+
+    <!-- Device Selector แสดงทุกหน้า -->
+    <div class="card">
+      <div class="device-select-row">
+        <select id="device-selector" onchange="onDeviceChange()">
+          <option value="">-- เลือกบอร์ด --</option>
+        </select>
+        <button onclick="showPage('pg-devices', document.querySelector('[onclick*=pg-devices]'))">+ เพิ่มบอร์ด</button>
+      </div>
+    </div>
+
+    <!-- ===== MONITOR ===== -->
+    <div class="page active" id="pg-monitor">
+      <div class="monitor-row">
+        <div class="monitor-card"><div class="monitor-label">🔥 อุณหภูมิ (PV)</div><div class="monitor-val" id="v-pv" style="color:var(--success)">--</div><div class="monitor-unit">Process Value</div></div>
+        <div class="monitor-card"><div class="monitor-label">🎯 เป้าหมาย (SV)</div><div class="monitor-val" id="v-sv" style="color:var(--accent)">--</div><div class="monitor-unit">Set Value</div></div>
+        <div class="monitor-card"><div class="monitor-label">⚡ เอาต์พุต (MV)</div><div class="monitor-val" id="v-mv" style="color:var(--warn)">--</div><div class="monitor-unit">%</div></div>
+      </div>
+      <div class="card" id="monitor-empty" style="display:none;">
+        <div class="empty-state"><div class="icon">📟</div>ยังไม่มีบอร์ด — ไปที่ "จัดการบอร์ด" เพื่อเพิ่มบอร์ดแรกของคุณ</div>
+      </div>
+    </div>
+
+    <!-- ===== PARAMETERS ===== -->
+    <div class="page" id="pg-params">
+      <div class="card">
+        <div class="card-title">🎛️ ค่าพื้นฐาน</div>
+        <div class="param-row"><div class="param-label">Setpoint <small>(SV)</small></div><div class="param-action"><span class="tag" id="v-sv-tag">--</span><input type="number" id="i-sv"><button class="btn" onclick="cmd('sv','i-sv')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Sensor Type <small>(InPt)</small></div><div class="param-action"><span class="tag" id="v-inpt">--</span><select id="i-inpt"><option value="0">K-Type TC</option><option value="1">J-Type TC</option><option value="2">E-Type TC</option><option value="10">Pt100 (JIS)</option></select><button class="btn" onclick="cmd('inpt','i-inpt')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Unit <small>(UnIt)</small></div><div class="param-action"><span class="tag" id="v-unit">--</span><select id="i-unit"><option value="0">°C</option><option value="1">°F</option></select><button class="btn" onclick="cmd('unit','i-unit')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Decimal Point <small>(dP)</small></div><div class="param-action"><span class="tag" id="v-dp">--</span><select id="i-dp"><option value="0">0</option><option value="1">0.0</option><option value="2">0.00</option></select><button class="btn" onclick="cmd('dp','i-dp')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Scale Hi/Lo <small>(SCH/SCL)</small></div><div class="param-action">Hi:<span class="tag" id="v-sch">--</span><input type="number" id="i-sch" style="width:58px;"><button class="btn" onclick="cmd('sch','i-sch')">SET</button>Lo:<span class="tag" id="v-scl">--</span><input type="number" id="i-scl" style="width:58px;"><button class="btn" onclick="cmd('scl','i-scl')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Control Action <small>(CACt)</small></div><div class="param-action"><span class="tag" id="v-cact">--</span><select id="i-cact"><option value="0">Reverse</option><option value="1">Direct</option></select><button class="btn" onclick="cmd('cact','i-cact')">SET</button></div></div>
+      </div>
+    </div>
+
+    <!-- ===== PID TUNING ===== -->
+    <div class="page" id="pg-tuning">
+      <div class="card">
+        <div class="card-title">🛠️ PID Parameters</div>
+        <div class="param-row"><div class="param-label">Proportional <small>(P)</small></div><div class="param-action"><span class="tag" id="v-p">--</span><input type="number" id="i-p"><button class="btn" onclick="cmd('p','i-p')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Integral <small>(I)</small></div><div class="param-action"><span class="tag" id="v-i">--</span><input type="number" id="i-i"><button class="btn" onclick="cmd('i','i-i')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Derivative <small>(D)</small></div><div class="param-action"><span class="tag" id="v-d">--</span><input type="number" id="i-d"><button class="btn" onclick="cmd('d','i-d')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Hysteresis <small>(HyS)</small></div><div class="param-action"><span class="tag" id="v-hys">--</span><input type="number" id="i-hys"><button class="btn" onclick="cmd('hys','i-hys')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Cycle Time <small>(CP)</small></div><div class="param-action"><span class="tag" id="v-cp">--</span><input type="number" id="i-cp"><button class="btn" onclick="cmd('cp','i-cp')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Timer <small>(tIm)</small></div><div class="param-action"><span class="tag" id="v-tim">--</span><input type="number" id="i-tim"><button class="btn" onclick="cmd('tim','i-tim')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Auto-Tuning <small>(AT)</small></div><div class="param-action"><span class="tag" id="v-at">--</span><select id="i-at"><option value="0">Stop</option><option value="1">Start</option></select><button class="btn" onclick="cmd('at','i-at')">SET</button></div></div>
+      </div>
+    </div>
+
+    <!-- ===== ALARM ===== -->
+    <div class="page" id="pg-alarm">
+      <div class="card">
+        <div class="card-title">🔔 Alarm Settings</div>
+        <div class="param-row" style="border-left:3px solid var(--danger);"><div class="param-label">Alarm 1 <small>(ALS1)</small></div><div class="param-action"><span class="tag" id="v-als1" style="min-width:70px;font-size:.78rem;">--</span><select id="i-als1"><option value="0">Off</option><option value="1">High</option><option value="3">Low</option></select><button class="btn" onclick="cmd('als1','i-als1')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Value 1 <small>(HyS1)</small></div><div class="param-action"><span class="tag" id="v-hys1">--</span><input type="number" id="i-hys1"><button class="btn" onclick="cmd('hys1','i-hys1')">SET</button></div></div>
+        <div class="param-row" style="border-left:3px solid var(--warn);"><div class="param-label">Alarm 2 <small>(ALS2)</small></div><div class="param-action"><span class="tag" id="v-als2" style="min-width:70px;font-size:.78rem;">--</span><select id="i-als2"><option value="0">Off</option><option value="1">High</option><option value="3">Low</option></select><button class="btn" onclick="cmd('als2','i-als2')">SET</button></div></div>
+        <div class="param-row"><div class="param-label">Value 2 <small>(HyS2)</small></div><div class="param-action"><span class="tag" id="v-hys2">--</span><input type="number" id="i-hys2"><button class="btn" onclick="cmd('hys2','i-hys2')">SET</button></div></div>
+      </div>
+    </div>
+
+    <!-- ===== MODBUS CONFIG (ASCII/RTU ปรับที่นี่) ===== -->
+    <div class="page" id="pg-modbus">
+      <div class="alert alert-info">💡 ESP32 จะ Hot Swap Address แล้วยืนยันก่อนใช้งานจริง — Rollback อัตโนมัติถ้าไม่ตอบสนอง</div>
+      <div class="card">
+        <div class="card-title">🔌 สถานะ Modbus ปัจจุบัน</div>
+        <div class="addr-display">
+          <div class="addr-num" id="disp-addr">--</div>
+          <div style="flex:1;"><div style="font-size:.73rem;color:var(--muted);">Modbus Address</div><div id="disp-addr-status" style="font-size:.85rem;">รอข้อมูล...</div></div>
+          <div class="tag" id="disp-mode" style="padding:6px 14px;font-size:.88rem;">--</div>
+        </div>
+        <div class="console" id="addr-log">>> รอรับข้อมูล</div>
+      </div>
+      <div class="cfg-grid">
+        <div class="card">
+          <div class="card-title">📍 เปลี่ยน Modbus Address</div>
+          <div style="margin-bottom:11px;"><label style="display:block;font-size:.79rem;color:#94a3b8;margin-bottom:4px;">Address ใหม่ (1–247)</label><input type="number" id="cfg-addr" min="1" max="247" style="width:100%;"></div>
+          <button class="btn btn-full" onclick="sendAddress()">เปลี่ยน Address</button>
+        </div>
+        <div class="card">
+          <div class="card-title">🔀 Modbus Protocol (ASCII / RTU)</div>
+          <div style="margin-bottom:11px;"><label style="display:block;font-size:.79rem;color:#94a3b8;margin-bottom:4px;">เลือกโหมด Protocol</label>
+            <select id="cfg-mode" style="width:100%;"><option value="ASCII">Modbus ASCII</option><option value="RTU">Modbus RTU</option></select>
+          </div>
+          <button class="btn btn-full" onclick="sendMode()">เปลี่ยนโหมด</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== จัดการบอร์ด ===== -->
+    <div class="page" id="pg-devices">
+      <div class="card">
+        <div class="card-title">📟 เพิ่มบอร์ดใหม่</div>
+        <div style="margin-bottom:11px;">
+          <label style="display:block;font-size:.79rem;color:#94a3b8;margin-bottom:4px;">Device ID (ตรงกับที่ตั้งไว้ในโค้ด ESP32)</label>
+          <input type="text" id="new-device-id" placeholder="เช่น sdu_01, sdu_factory_a" style="width:100%;">
+          <div style="font-size:.72rem;color:var(--muted);margin-top:4px;">ดูได้จากตัวแปร DEVICE_ID ในไฟล์ main.cpp ของ ESP32</div>
+        </div>
+        <div style="margin-bottom:11px;">
+          <label style="display:block;font-size:.79rem;color:#94a3b8;margin-bottom:4px;">ชื่อที่จะแสดง (ตั้งเอง)</label>
+          <input type="text" id="new-device-name" placeholder="เช่น เครื่องอบที่ 1, สาขาบางนา" style="width:100%;">
+        </div>
+        <button class="btn btn-full" onclick="addDevice()">เพิ่มบอร์ดนี้เข้าระบบ</button>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 บอร์ดของฉัน</div>
+        <div id="device-list"></div>
+      </div>
+    </div>
+
+    <!-- ===== DEBUG ===== -->
+    <div class="page" id="pg-debug">
+      <div class="card">
+        <div class="card-title">💻 Debug Console</div>
+        <div class="param-row"><div class="param-label">ยิงตรง Register</div><div class="param-action">Reg:<input type="text" id="d-reg" value="001D" style="width:54px;">Val:<input type="number" id="d-val" value="50" style="width:54px;"><button class="btn" onclick="sendDebug()">SEND</button></div></div>
+        <div class="console" id="debug-log">>> Debug Console</div>
+      </div>
+    </div>
+
+
+    <!-- USERS PAGE -->
+    <div class="page" id="pg-users">
+      <div class="card">
+        <div class="card-title">👥 จัดการผู้ใช้ในองค์กร</div>
+        <div id="users-quota" style="font-size:.8rem;color:var(--muted);margin-bottom:12px"></div>
+        <div id="users-list"></div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)" id="invite-section">
+          <div class="param-row">
+            <div class="param-label">เพิ่มผู้ใช้ใหม่ (email ที่สมัครแล้ว)</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
+            <input type="email" id="invite-email" placeholder="user@company.com" style="flex:1;min-width:180px">
+            <select id="invite-role" style="width:130px">
+              <option value="manager">Manager</option>
+              <option value="operator" selected>Operator</option>
+              <option value="viewer">Viewer</option>
+            </select>
+            <button class="btn" onclick="inviteUser()">+ เพิ่ม</button>
+          </div>
+          <div style="font-size:.72rem;color:var(--muted);margin-top:6px">
+            Admin — แก้ไขได้ทุกอย่าง รวมถึงจัดการผู้ใช้ |
+            Manager — แก้ค่าพารามิเตอร์ได้ |
+            Operator — ดูและส่ง Command ได้ |
+            Viewer — ดูอย่างเดียว
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AUDIT LOG PAGE -->
+    <div class="page" id="pg-audit">
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center">
+          <span>📋 Audit Log</span>
+          <button class="btn" onclick="loadAuditLog()" style="font-size:.75rem">🔄 รีเฟรช</button>
+        </div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:10px">บันทึกทุก action ของทุกผู้ใช้ในองค์กร</div>
+        <div id="audit-list"><div style="color:var(--muted);font-size:.82rem">กำลังโหลด...</div></div>
+      </div>
+    </div>
+
+    <!-- ALERT RULES PAGE -->
+    <div class="page" id="pg-alerts">
+      <div class="card">
+        <div class="card-title">🚨 Alert Rules</div>
+        <div style="font-size:.78rem;color:var(--muted);margin-bottom:14px">ตั้งเงื่อนไขแจ้งเตือนเมื่อค่าผิดปกติ</div>
+
+        <div id="alert-rules-list"></div>
+
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)">
+          <div class="card-title" style="font-size:.85rem;margin-bottom:10px">+ เพิ่ม Alert Rule</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div>
+              <div class="param-label" style="margin-bottom:4px">พารามิเตอร์</div>
+              <select id="al-param" style="width:100%">
+                <option value="pv">PV (Process Value)</option>
+                <option value="sv">SV (Set Value)</option>
+                <option value="mv">MV (Output %)</option>
+                <option value="ALS1">Alarm 1</option>
+                <option value="ALS2">Alarm 2</option>
+              </select>
+            </div>
+            <div>
+              <div class="param-label" style="margin-bottom:4px">เงื่อนไข</div>
+              <select id="al-cond" style="width:100%">
+                <option value="gt">มากกว่า (&gt;)</option>
+                <option value="lt">น้อยกว่า (&lt;)</option>
+              </select>
+            </div>
+            <div>
+              <div class="param-label" style="margin-bottom:4px">ค่า threshold</div>
+              <input type="number" id="al-val" placeholder="เช่น 80" style="width:100%">
+            </div>
+            <div>
+              <div class="param-label" style="margin-bottom:4px">ช่องทางแจ้งเตือน</div>
+              <select id="al-channel" style="width:100%">
+                <option value="dashboard">Dashboard เท่านั้น</option>
+                <option value="line">Line Notify</option>
+              </select>
+            </div>
+          </div>
+          <div id="line-token-row" style="margin-top:8px;display:none">
+            <div class="param-label" style="margin-bottom:4px">Line Notify Token</div>
+            <input type="text" id="al-line-token" placeholder="ได้จาก notify-bot.line.me/th/manage" style="width:100%">
+          </div>
+          <button class="btn" style="margin-top:10px;width:100%" onclick="saveAlertRule()">💾 บันทึก Alert Rule</button>
+        </div>
+      </div>
+
+      <!-- Alert History -->
+      <div class="card" style="margin-top:14px">
+        <div class="card-title">🔔 Alert History</div>
+        <div id="alert-history-list"><div style="color:var(--muted);font-size:.82rem">ยังไม่มี Alert</div></div>
+      </div>
+    </div>
+  </main>
+</div>
+</div>
+
+<script>
+// ================================================================
+// 🔥 FIREBASE CONFIG — แก้ตรงนี้ด้วยค่าจาก Firebase Console ของคุณ
+// ================================================================
+const firebaseConfig = {
+  apiKey:            "AIzaSyDRX-jUHuCTxpO3jF96bc88F8p1u3YNg-c",
+  authDomain:         "sdu440-iot.firebaseapp.com",
+  databaseURL:        "https://sdu440-iot-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:          "sdu440-iot",
+};
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db   = firebase.database();
+
+// ================================================================
+// STATE
+// ================================================================
+let currentUser      = null;
+let currentDevice    = null;
+let dataListener     = null;
+let addressListener  = null;
+let commandListener  = null;
+let devicesListener  = null;
+let currentCompanyKey = null;   // companyKey ของ user ที่ login อยู่
+
+
+function detachDeviceListeners() {
+  if (currentDevice) {
+    if (dataListener) {
+      db.ref(`devices/${currentDevice}/data`).off('value', dataListener);
+      dataListener = null;
+    }
+    if (addressListener) {
+      db.ref(`devices/${currentDevice}/addressResult`).off('value', addressListener);
+      addressListener = null;
+    }
+    if (commandListener) {
+      db.ref(`devices/${currentDevice}/lastCommandResult`).off('value', commandListener);
+      commandListener = null;
+    }
+  }
+}
+
+function detachUserListeners() {
+  if (currentUser && devicesListener) {
+    const path = currentCompanyKey
+      ? 'companies/' + currentCompanyKey + '/devices'
+      : 'users/' + currentUser.uid + '/devices';
+    db.ref(path).off('value', devicesListener);
+    devicesListener = null;
+  }
+}
+
+// ================================================================
+// AUTH UI
+// ================================================================
+function switchAuthTab(which) {
+  document.getElementById('tab-login').classList.toggle('active', which === 'login');
+  document.getElementById('tab-signup').classList.toggle('active', which === 'signup');
+  document.getElementById('form-login').style.display  = which === 'login'  ? 'block' : 'none';
+  document.getElementById('form-signup').style.display = which === 'signup' ? 'block' : 'none';
+  hideAuthMsg();
+}
+
+function showAuthMsg(msg, ok) {
+  const el = document.getElementById('auth-msg');
+  el.textContent = msg;
+  el.className = 'auth-msg ' + (ok ? 'ok' : 'err');
+  el.style.display = 'block';
+}
+function hideAuthMsg() { document.getElementById('auth-msg').style.display = 'none'; }
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-password').value;
+  if (!email || !pass) { showAuthMsg('กรุณากรอก Email และ Password', false); return; }
+  auth.signInWithEmailAndPassword(email, pass)
+    .then(() => writeAuditLog && writeAuditLog('login', ''))
+    .catch(e => showAuthMsg(translateAuthError(e.code), false));
+}
+
+// ================================================================
+// SIGNUP — สมัครพร้อมชื่อบริษัท (จำกัด 5 บัญชีต่อบริษัท)
+// ================================================================
+async function doSignup() {
+  const company = document.getElementById('signup-company').value.trim();
+  const email   = document.getElementById('signup-email').value.trim();
+  const pass    = document.getElementById('signup-password').value;
+  const pass2   = document.getElementById('signup-password2').value;
+
+  if (!company) { showAuthMsg('กรุณากรอกชื่อบริษัท / องค์กร', false); return; }
+  if (!email || !pass) { showAuthMsg('กรุณากรอก Email และ Password', false); return; }
+  if (pass.length < 6) { showAuthMsg('Password ต้องมีอย่างน้อย 6 ตัวอักษร', false); return; }
+  if (pass !== pass2)  { showAuthMsg('Password ไม่ตรงกัน', false); return; }
+
+  // ชื่อบริษัท → key ใน Firebase (ตัดอักขระพิเศษ)
+  const companyKey = company.replace(/[.#$\[\]/]/g, '_');
+
+  showAuthMsg('กำลังตรวจสอบโควต้า...', true);
+
+  try {
+    // เช็คจำนวน member ปัจจุบันของบริษัทนั้น
+    const snap = await db.ref('companies/' + companyKey + '/members').get();
+    const members = snap.val() || {};
+    const count = Object.keys(members).length;
+
+    if (count >= 5) {
+      showAuthMsg('บริษัทนี้มีบัญชีครบ 5 บัญชีแล้ว ไม่สามารถสมัครเพิ่มได้', false);
+      return;
+    }
+
+    // แสดง quota
+    document.getElementById('signup-quota').style.display = 'block';
+    document.getElementById('quota-used').textContent = count;
+
+    showAuthMsg('กำลังสมัครสมาชิก...', true);
+
+    // สร้าง user ใน Firebase Auth
+    const cred = await auth.createUserWithEmailAndPassword(email, pass);
+    const uid  = cred.user.uid;
+
+    // บันทึก member ใต้ companies/{companyKey}/members/{uid}
+    await db.ref('companies/' + companyKey + '/members/' + uid).set({
+      email:     email,
+      joinedAt:  Date.now(),
+      companyName: company
+    });
+
+    // บันทึก companyKey ใน users/{uid}/company เพื่อใช้ตอน login
+    await db.ref('users/' + uid + '/company').set(companyKey);
+    await db.ref('users/' + uid + '/companyName').set(company);
+
+    showAuthMsg('สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...', true);
+
+  } catch(e) {
+    showAuthMsg(translateAuthError(e.code) || e.message, false);
+  }
+}
+
+function doLogout() {
+  detachDeviceListeners();
+  detachUserListeners();
+  currentDevice = null;
+  auth.signOut();
+}
+
+function translateAuthError(code) {
+  const map = {
+    'auth/email-already-in-use': 'อีเมลนี้ถูกใช้สมัครไปแล้ว',
+    'auth/invalid-email':        'รูปแบบอีเมลไม่ถูกต้อง',
+    'auth/weak-password':        'Password สั้นเกินไป (อย่างน้อย 6 ตัว)',
+    'auth/user-not-found':       'ไม่พบบัญชีนี้ในระบบ',
+    'auth/wrong-password':       'Password ไม่ถูกต้อง',
+    'auth/invalid-credential':   'Email หรือ Password ไม่ถูกต้อง',
+    'auth/too-many-requests':    'พยายามเข้าระบบผิดหลายครั้ง กรุณารอสักครู่',
+  };
+  return map[code] || ('เกิดข้อผิดพลาด: ' + code);
+}
+
+// ================================================================
+// AUTH STATE LISTENER — สลับหน้า Login <-> App อัตโนมัติ
+// ================================================================
+auth.onAuthStateChanged(async user => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    document.getElementById('user-email').textContent = user.email;
+    setBadge('fb', true, 'Firebase: OK');
+
+    // โหลด companyKey ของ user นี้
+    const snap = await db.ref('users/' + user.uid + '/company').get();
+    currentCompanyKey = snap.val() || null;
+
+    // แสดง companyName ใน topbar
+    const nameSnap = await db.ref('users/' + user.uid + '/companyName').get();
+    const cName = nameSnap.val();
+    if (cName) {
+      const chip = document.getElementById('user-email');
+      chip.textContent = user.email + ' · ' + cName;
+    }
+
+    loadUserDevices();
+    await loadCompanyConfig();
+    await loadCurrentUserRole();
+    await checkPendingInvite();
+    await loadAlertRules();
+    startAlertMonitor();
+  } else {
+    detachDeviceListeners();
+    detachUserListeners();
+    currentUser = null;
+    currentDevice = null;
+    currentCompanyKey = null;
+    document.getElementById('auth-screen').style.display = 'flex';
+    document.getElementById('app').style.display = 'none';
+  }
+});
+
+// ================================================================
+// DEVICE MANAGEMENT (1 user หลายบอร์ด)
+// ================================================================
+function loadUserDevices() {
+  detachUserListeners();
+  devicesListener = snap => {
+    const devices = snap.val() || {};
+    renderDeviceSelector(devices);
+    renderDeviceList(devices);
+  };
+  // ใช้ companyKey ถ้ามี ไม่งั้น fallback UID (backward compat)
+  const path = currentCompanyKey
+    ? 'companies/' + currentCompanyKey + '/devices'
+    : 'users/' + currentUser.uid + '/devices';
+  db.ref(path).on('value', devicesListener);
+}
+
+function renderDeviceSelector(devices) {
+  const sel = document.getElementById('device-selector');
+  const prevValue = sel.value;
+  sel.innerHTML = '<option value="">-- เลือกบอร์ด --</option>';
+  Object.keys(devices).forEach(devId => {
+    const opt = document.createElement('option');
+    opt.value = devId;
+    opt.textContent = devices[devId].name || devId;
+    sel.appendChild(opt);
+  });
+  document.getElementById('monitor-empty').style.display =
+    Object.keys(devices).length === 0 ? 'block' : 'none';
+
+  // ถ้ามีบอร์ดเดียว เลือกอัตโนมัติ
+  const keys = Object.keys(devices);
+  if (keys.length > 0 && !currentDevice) {
+    sel.value = keys[0];
+    onDeviceChange();
+  } else if (prevValue && devices[prevValue]) {
+    sel.value = prevValue;
+  }
+}
+
+function renderDeviceList(devices) {
+  const el = document.getElementById('device-list');
+  const keys = Object.keys(devices);
+  if (keys.length === 0) {
+    el.innerHTML = '<div class="empty-state"><div class="icon">📭</div>ยังไม่มีบอร์ด</div>';
+    return;
+  }
+  el.innerHTML = keys.map(devId => `
+    <div class="param-row">
+      <div class="param-label">${devices[devId].name || devId} <small>${devId}</small></div>
+      <div class="param-action"><button class="btn" style="background:var(--danger);" onclick="removeDevice('${devId}')">ลบ</button></div>
+    </div>
+  `).join('');
+}
+
+function addDevice() {
+  const devId = document.getElementById('new-device-id').value.trim();
+  const name  = document.getElementById('new-device-name').value.trim();
+  if (!devId) { logInfo('กรุณากรอก Device ID'); return; }
+  if (!/^[a-zA-Z0-9_-]{3,40}$/.test(devId)) {
+    logErr('Device ID ใช้ได้เฉพาะ A-Z, a-z, 0-9, _ และ - ความยาว 3–40 ตัว');
+    return;
+  }
+
+  const devPath = currentCompanyKey
+    ? 'companies/' + currentCompanyKey + '/devices/' + devId
+    : 'users/' + currentUser.uid + '/devices/' + devId;
+  db.ref(devPath).set({
+    name: name || devId,
+    addedAt: Date.now()
+  }).then(() => {
+    logInfo(`เพิ่มบอร์ด "${devId}" สำเร็จ`);
+    document.getElementById('new-device-id').value = '';
+    document.getElementById('new-device-name').value = '';
+  });
+}
+
+function removeDevice(devId) {
+  if (!confirm(`ลบบอร์ด "${devId}" จากรายการของคุณ?`)) return;
+  const remPath = currentCompanyKey
+    ? 'companies/' + currentCompanyKey + '/devices/' + devId
+    : 'users/' + currentUser.uid + '/devices/' + devId;
+  db.ref(remPath).remove().then(() => {
+    logInfo(`ลบบอร์ด "${devId}" แล้ว`);
+    if (currentDevice === devId) {
+      detachDeviceListeners();
+      currentDevice = null;
+      document.getElementById('device-selector').value = '';
+      setBadge('sdu', false, 'SDU440: ยังไม่เลือกบอร์ด');
+    }
+  });
+}
+
+function onDeviceChange() {
+  const devId = document.getElementById('device-selector').value;
+  detachDeviceListeners();
+  currentDevice = devId || null;
+  if (!currentDevice) {
+    setBadge('sdu', false, 'SDU440: ยังไม่เลือกบอร์ด');
+    return;
+  }
+  logInfo(`สลับไปดูบอร์ด: ${currentDevice}`);
+  listenToDeviceData();
+}
+
+// ================================================================
+// REALTIME DATA LISTENER (Firebase → UI)
+// ================================================================
+const INPT_NAMES = ["K-Type TC","J-Type TC","E-Type TC","N-Type TC","C-Type TC","T-Type TC","K-Type 0.1","R-Type","S-Type","B-Type","JIS Pt100","DIN Pt100"];
+const AL_NAMES   = ["Off","High","Standby Hi","Low","Standby Lo","Dev Hi","Dev Lo","Deviation"];
+
+function listenToDeviceData() {
+  dataListener = db.ref(`devices/${currentDevice}/data`).on('value', snap => {
+    const d = snap.val();
+    if (!d) { setBadge('sdu', false, 'SDU440: ไม่มีข้อมูล'); return; }
+
+    setBadge('sdu', d.status === true, d.status ? 'SDU440: Online' : 'SDU440: Error');
+
+    set('v-pv', d.pv); set('v-sv', d.sv); set('v-sv-tag', d.sv);
+    set('v-mv', d.mv!=null ? d.mv+' %' : '--');
+    set('v-p', d.P!=null ? (d.P/10).toFixed(1) : '--');
+    set('v-i', d.I); set('v-d', d.D); set('v-hys', d.HyS);
+    set('v-cp', d.CP); set('v-tim', d.tIm); set('v-at', d.AT);
+    set('v-inpt', INPT_NAMES[d.InPt] || d.InPt);
+    set('v-unit', d.UnIt===0 ? '°C' : '°F');
+    set('v-dp', d.dP); set('v-sch', d.SCH); set('v-scl', d.SCL);
+    set('v-als1', AL_NAMES[d.ALS1] || d.ALS1); set('v-hys1', d.HyS1);
+    set('v-als2', AL_NAMES[d.ALS2] || d.ALS2); set('v-hys2', d.HyS2);
+    set('v-cact', d.CACt===0 ? 'Rev' : 'Dir');
+
+    if (d.modbusAddr != null) {
+      set('disp-addr', d.modbusAddr);
+      const el = document.getElementById('disp-addr-status');
+      el.textContent = d.status ? '✅ ตอบสนอง' : '❌ ไม่ตอบสนอง';
+      el.className   = d.status ? 'addr-ok' : 'addr-err';
+    }
+    if (d.modbusMode) {
+      set('disp-mode', d.modbusMode);
+      document.getElementById('disp-mode').style.color = d.modbusMode==='RTU' ? 'var(--warn)' : 'var(--accent)';
+    }
+  });
+
+  // ฟัง addressResult แยก (ผลลัพธ์การ hot-swap)
+  addressListener = snap => {
+    const r = snap.val();
+    if (!r) return;
+    const log = document.getElementById('addr-log');
+    log.innerHTML += `[${new Date().toLocaleTimeString()}] address=${r.address} verified=${r.verified}\n`;
+    log.scrollTop = log.scrollHeight;
+  };
+  db.ref(`devices/${currentDevice}/addressResult`).on('value', addressListener);
+
+  // ฟังผลลัพธ์คำสั่งล่าสุดจาก ESP32
+  commandListener = snap => {
+    const r = snap.val();
+    if (!r) return;
+    if (r.ok === true) logInfo('ESP32: ' + (r.message || 'Command OK'));
+    else logErr('ESP32: ' + (r.message || 'Command Error'));
+  };
+  db.ref(`devices/${currentDevice}/lastCommandResult`).on('value', commandListener);
+}
+
+// ================================================================
+// SEND COMMANDS (Dashboard → Firebase → ESP32 polls)
+// ================================================================
+function sendCommand(payload) {
+  if (!currentDevice) { logInfo('กรุณาเลือกบอร์ดก่อน'); return; }
+  payload.updatedAt = Date.now();
+  db.ref(`devices/${currentDevice}/commands`).update(payload)
+    .then(() => logInfo(`ส่งคำสั่ง: ${JSON.stringify(payload)}`))
+    .catch(e => logErr('ส่งคำสั่งไม่สำเร็จ: ' + e.message));
+}
+
+function cmd(key, inputId) {
+  const raw = document.getElementById(inputId).value;
+  if (raw === '') { logInfo('กรุณากรอกค่า'); return; }
+  const val = Number(raw);
+  if (!Number.isFinite(val) || val < -32768 || val > 32767) {
+    logErr('ค่าต้องเป็นตัวเลขช่วง -32768 ถึง 32767');
+    return;
+  }
+  sendCommand({ [key]: val });
+}
+
+function sendDebug() {
+  if (!can('send_command')) { logInfo('ไม่มีสิทธิ์ส่ง command'); return; }
+  const reg = document.getElementById('d-reg').value.trim();
+  const val = Number(document.getElementById('d-val').value);
+  if (!/^[0-9A-Fa-f]{1,4}$/.test(reg)) { logErr('Reg ต้องเป็นเลข HEX เช่น 001D'); return; }
+  if (!Number.isFinite(val) || val < -32768 || val > 32767) { logErr('Val ต้องอยู่ช่วง -32768 ถึง 32767'); return; }
+  logInfo('หมายเหตุ: firmware ปิด Debug Write ไว้เป็นค่าเริ่มต้น ต้องเปิด ENABLE_DEBUG_WRITE=1 ก่อน');
+  sendCommand({ debug_reg: reg, debug_val: val });
+}
+
+function sendAddress() {
+  const addr = parseInt(document.getElementById('cfg-addr').value);
+  if (!addr || addr < 1 || addr > 247) { logErr('Address ต้องอยู่ 1–247'); return; }
+  sendCommand({ set_address: addr });
+}
+
+function sendMode() {
+  sendCommand({ set_mode: document.getElementById('cfg-mode').value });
+}
+
+// ================================================================
+// UI HELPERS
+// ================================================================
+function set(id, val) { const el=document.getElementById(id); if(el) el.textContent = (val!=null ? val : '--'); }
+function setBadge(which, ok, txt) {
+  const el = document.getElementById(`badge-${which}`);
+  el.className = 'badge ' + (ok?'ok':'err');
+  document.getElementById(`badge-${which}-txt`).textContent = txt;
+}
+function showPage(id, el) {
+  if (id === 'pg-users')  { setTimeout(loadUsersPage,  50); }
+  if (id === 'pg-audit')  { setTimeout(loadAuditLog,   50); }
+  if (id === 'pg-alerts') { setTimeout(()=>{ loadAlertRules(); loadAlertHistory(); }, 50); }
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (el) el.classList.add('active');
+}
+function logInfo(msg) { appendLog(`<span class="log-info">[INFO]</span> ${msg}`); }
+function logErr(msg)  { appendLog(`<span class="log-err">[ERR]</span>  ${msg}`); }
+function appendLog(html) {
+  const el = document.getElementById('debug-log');
+  if (!el) return;
+  el.innerHTML += html + '\n';
+  el.scrollTop = el.scrollHeight;
+}
+</script>
+
+<script>
+
+// ================================================================
+// ENTERPRISE — ROLES
+// ================================================================
+const ROLES = { admin:4, manager:3, operator:2, viewer:1 };
+let currentUserRole = 'viewer';
+
+async function loadCurrentUserRole() {
+  if (!currentUser || !currentCompanyKey) return;
+  const snap = await db.ref('companies/' + currentCompanyKey + '/members/' + currentUser.uid + '/role').get();
+  currentUserRole = snap.val() || 'viewer';
+  applyRoleUI();
+}
+
+function can(action) {
+  const lvl = ROLES[currentUserRole] || 1;
+  if (action === 'edit_params')   return lvl >= 3;
+  if (action === 'send_command')  return lvl >= 2;
+  if (action === 'manage_users')  return lvl >= 4;
+  if (action === 'view_audit')    return lvl >= 3;
+  if (action === 'manage_alerts') return lvl >= 3;
+  if (action === 'export')        return lvl >= 2;
+  return lvl >= 1;
+}
+
+function applyRoleUI() {
+  const badge = document.getElementById('role-badge');
+  if (badge) {
+    badge.textContent = currentUserRole.toUpperCase();
+    badge.className = 'role-badge role-' + currentUserRole;
+  }
+  // ซ่อน nav ตาม role
+  const navUsers = document.getElementById('nav-users');
+  const navAudit = document.getElementById('nav-audit');
+  if (navUsers) navUsers.style.display = can('manage_users') ? '' : 'none';
+  if (navAudit) navAudit.style.display = can('view_audit') ? '' : 'none';
+  // Lock ปุ่มที่ไม่มีสิทธิ์
+  document.querySelectorAll('[data-perm]').forEach(el => {
+    const ok = can(el.dataset.perm);
+    el.disabled = !ok;
+    el.title = ok ? '' : 'สิทธิ์ไม่เพียงพอ (' + currentUserRole + ')';
+    el.classList.toggle('perm-lock', !ok);
+  });
+}
+
+// ================================================================
+// ENTERPRISE — AUDIT LOG
+// ================================================================
+async function writeAuditLog(action, detail) {
+  if (!currentUser || !currentCompanyKey) return;
+  const entry = {
+    uid:    currentUser.uid,
+    email:  currentUser.email,
+    role:   currentUserRole,
+    action: action,
+    detail: detail || '',
+    device: currentDevice || '-',
+    ts:     Date.now()
+  };
+  await db.ref('companies/' + currentCompanyKey + '/auditLog').push(entry);
+}
+
+async function loadAuditLog() {
+  if (!can('view_audit')) return;
+  const snap = await db.ref('companies/' + currentCompanyKey + '/auditLog')
+    .orderByChild('ts').limitToLast(100).get();
+  const container = document.getElementById('audit-list');
+  if (!snap.val()) { container.innerHTML = '<div style="color:var(--muted);font-size:.82rem">ยังไม่มี log</div>'; return; }
+  const entries = Object.values(snap.val()).reverse();
+  container.innerHTML = entries.map(e => {
+    const d = new Date(e.ts);
+    const t = d.toLocaleDateString('th') + ' ' + d.toLocaleTimeString('th', {hour:'2-digit',minute:'2-digit'});
+    return \`<div class="audit-row">
+      <span class="audit-time">\${t}</span>
+      <span class="audit-user">\${e.email||e.uid}</span>
+      <span class="role-badge role-\${e.role||'viewer'}" style="margin-right:6px">\${(e.role||'viewer').toUpperCase()}</span>
+      <span class="audit-action"><b>\${e.action}</b>\${e.detail?' — '+e.detail:''} \${e.device&&e.device!=='-'?'['+e.device+']':''}</span>
+    </div>\`;
+  }).join('');
+}
+
+// ================================================================
+// ENTERPRISE — USER MANAGEMENT
+// ================================================================
+async function loadUsersPage() {
+  if (!can('manage_users')) return;
+  const snap = await db.ref('companies/' + currentCompanyKey + '/members').get();
+  const members = snap.val() || {};
+  const list = document.getElementById('users-list');
+  const quota = document.getElementById('users-quota');
+  const count = Object.keys(members).length;
+  const limit = companyUserLimit;
+  quota.textContent = 'ใช้ไปแล้ว ' + count + ' / ' + limit + ' บัญชี';
+
+  list.innerHTML = Object.entries(members).map(([uid, m]) => \`
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="flex:1;font-size:.85rem">\${m.email||uid}</div>
+      <select onchange="changeRole('\${uid}',this.value)" style="width:120px;font-size:.78rem" \${uid===currentUser.uid?'disabled':''}>
+        <option value="admin"    \${m.role==='admin'   ?'selected':''}>Admin</option>
+        <option value="manager"  \${m.role==='manager' ?'selected':''}>Manager</option>
+        <option value="operator" \${m.role==='operator'?'selected':''}>Operator</option>
+        <option value="viewer"   \${m.role==='viewer'  ?'selected':''}>Viewer</option>
+      </select>
+      \${uid!==currentUser.uid?\`<button class="btn" style="font-size:.72rem;color:var(--danger)" onclick="removeUser('\${uid}','\${m.email||uid}')">ลบ</button>\`:'<span style="font-size:.72rem;color:var(--muted)">(คุณ)</span>'}
+    </div>\`).join('');
+}
+
+async function changeRole(uid, role) {
+  await db.ref('companies/' + currentCompanyKey + '/members/' + uid + '/role').set(role);
+  await writeAuditLog('change_role', 'uid=' + uid + ' → ' + role);
+  logInfo('เปลี่ยน role สำเร็จ');
+}
+
+async function removeUser(uid, email) {
+  if (!confirm('ลบ ' + email + ' ออกจากองค์กร?')) return;
+  await db.ref('companies/' + currentCompanyKey + '/members/' + uid).remove();
+  await writeAuditLog('remove_user', email);
+  loadUsersPage();
+}
+
+async function inviteUser() {
+  if (!can('manage_users')) { logInfo('ไม่มีสิทธิ์'); return; }
+  const email = document.getElementById('invite-email').value.trim();
+  const role  = document.getElementById('invite-role').value;
+  if (!email) { logInfo('กรอก email ก่อน'); return; }
+
+  // หา UID จาก email โดยตรวจ users collection
+  const usersSnap = await db.ref('companies/' + currentCompanyKey + '/members').get();
+  const members = usersSnap.val() || {};
+  const count = Object.keys(members).length;
+  if (count >= companyUserLimit) { logInfo('ครบ quota ' + companyUserLimit + ' คนแล้ว'); return; }
+
+  // สร้าง pending invite แทน (ผู้ใช้ต้อง login ด้วย email นั้นแล้วระบบจะ assign role)
+  const inviteKey = email.replace(/[.#$\[\]/]/g, '_');
+  await db.ref('companies/' + currentCompanyKey + '/pendingInvites/' + inviteKey).set({
+    email: email, role: role, invitedBy: currentUser.email, invitedAt: Date.now()
+  });
+  await writeAuditLog('invite_user', email + ' as ' + role);
+  document.getElementById('invite-email').value = '';
+  logInfo('ส่ง invite ให้ ' + email + ' แล้ว — ให้เขาสมัครด้วย email นี้');
+}
+
+// เช็ค pending invite ตอน login
+async function checkPendingInvite() {
+  if (!currentUser || !currentCompanyKey) return;
+  const emailKey = currentUser.email.replace(/[.#$\[\]/]/g, '_');
+  const snap = await db.ref('companies/' + currentCompanyKey + '/pendingInvites/' + emailKey).get();
+  if (!snap.val()) return;
+  const inv = snap.val();
+  // Assign role
+  await db.ref('companies/' + currentCompanyKey + '/members/' + currentUser.uid + '/role').set(inv.role);
+  // Remove invite
+  await db.ref('companies/' + currentCompanyKey + '/pendingInvites/' + emailKey).remove();
+  currentUserRole = inv.role;
+  logInfo('ได้รับสิทธิ์ ' + inv.role + ' จาก ' + inv.invitedBy);
+}
+
+// ================================================================
+// ENTERPRISE — ALERTS
+// ================================================================
+let alertRules = {};
+let alertCheckInterval = null;
+
+async function loadAlertRules() {
+  if (!currentCompanyKey) return;
+  const snap = await db.ref('companies/' + currentCompanyKey + '/alertRules').get();
+  alertRules = snap.val() || {};
+  renderAlertRules();
+}
+
+function renderAlertRules() {
+  const list = document.getElementById('alert-rules-list');
+  if (!list) return;
+  const entries = Object.entries(alertRules);
+  if (!entries.length) { list.innerHTML = '<div style="color:var(--muted);font-size:.82rem;margin-bottom:10px">ยังไม่มี Alert Rule</div>'; return; }
+  list.innerHTML = entries.map(([key, r]) => \`
+    <div class="alert-row \${r.active?'alert-active':'alert-ok'}">
+      <div style="flex:1;font-size:.82rem">
+        <b>\${r.param}</b> \${r.cond==='gt'?'>':'<'} <b>\${r.val}</b>
+        <span style="color:var(--muted);margin-left:8px">[\${r.channel||'dashboard'}]</span>
+        \${r.active?'<span style="color:var(--danger);margin-left:6px">🔴 กำลังแจ้งเตือน</span>':'<span style="color:var(--success);margin-left:6px">🟢 ปกติ</span>'}
+      </div>
+      <button class="btn" style="font-size:.72rem" onclick="deleteAlertRule('\${key}')">ลบ</button>
+    </div>\`).join('');
+}
+
+async function saveAlertRule() {
+  if (!can('manage_alerts')) { logInfo('ไม่มีสิทธิ์'); return; }
+  const param   = document.getElementById('al-param').value;
+  const cond    = document.getElementById('al-cond').value;
+  const val     = parseFloat(document.getElementById('al-val').value);
+  const channel = document.getElementById('al-channel').value;
+  const token   = document.getElementById('al-line-token').value.trim();
+  if (isNaN(val)) { logInfo('กรอกค่า threshold'); return; }
+  const rule = { param, cond, val, channel, active: false, createdBy: currentUser.email, createdAt: Date.now() };
+  if (channel === 'line' && token) rule.lineToken = token;
+  await db.ref('companies/' + currentCompanyKey + '/alertRules').push(rule);
+  await writeAuditLog('add_alert_rule', param + (cond==='gt'?'>':'<') + val);
+  await loadAlertRules();
+  logInfo('บันทึก Alert Rule แล้ว');
+}
+
+async function deleteAlertRule(key) {
+  if (!can('manage_alerts')) return;
+  await db.ref('companies/' + currentCompanyKey + '/alertRules/' + key).remove();
+  await writeAuditLog('delete_alert_rule', key);
+  delete alertRules[key];
+  renderAlertRules();
+}
+
+function startAlertMonitor() {
+  if (alertCheckInterval) clearInterval(alertCheckInterval);
+  alertCheckInterval = setInterval(checkAlerts, 10000);
+}
+
+async function checkAlerts() {
+  if (!currentDevice || !currentCompanyKey || !Object.keys(alertRules).length) return;
+  const snap = await db.ref('companies/' + currentCompanyKey + '/devices/' + currentDevice + '/data').get();
+  const data = snap.val();
+  if (!data) return;
+  const now = Date.now();
+  for (const [key, rule] of Object.entries(alertRules)) {
+    const v = data[rule.param];
+    if (v === undefined || v === null) continue;
+    const triggered = rule.cond === 'gt' ? v > rule.val : v < rule.val;
+    if (triggered && !rule.active) {
+      await db.ref('companies/' + currentCompanyKey + '/alertRules/' + key + '/active').set(true);
+      await db.ref('companies/' + currentCompanyKey + '/alertHistory').push({
+        ruleKey: key, param: rule.param, cond: rule.cond, threshold: rule.val,
+        actual: v, device: currentDevice, ts: now
+      });
+      logInfo('⚠️ Alert: ' + rule.param + ' = ' + v + ' (' + (rule.cond==='gt'?'>':'<') + rule.val + ')');
+      if (rule.channel === 'line' && rule.lineToken) sendLineNotify(rule, v);
+      alertRules[key].active = true;
+      renderAlertRules();
+    } else if (!triggered && rule.active) {
+      await db.ref('companies/' + currentCompanyKey + '/alertRules/' + key + '/active').set(false);
+      alertRules[key].active = false;
+      renderAlertRules();
+    }
+  }
+}
+
+async function sendLineNotify(rule, actual) {
+  const msg = '\n[SDU440 Alert]\nอุปกรณ์: ' + currentDevice +
+    '\nพารามิเตอร์: ' + rule.param + '\nค่าที่วัดได้: ' + actual +
+    '\nเงื่อนไข: ' + rule.param + (rule.cond==='gt'?'>':'<') + rule.val;
+  try {
+    await fetch('https://notify-api.line.me/api/notify', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + rule.lineToken, 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: 'message=' + encodeURIComponent(msg)
+    });
+  } catch(e) { logInfo('Line Notify ส่งไม่ได้: ' + e.message); }
+}
+
+async function loadAlertHistory() {
+  if (!currentCompanyKey) return;
+  const snap = await db.ref('companies/' + currentCompanyKey + '/alertHistory')
+    .orderByChild('ts').limitToLast(20).get();
+  const list = document.getElementById('alert-history-list');
+  if (!list) return;
+  if (!snap.val()) { list.innerHTML = '<div style="color:var(--muted);font-size:.82rem">ยังไม่มี Alert</div>'; return; }
+  const entries = Object.values(snap.val()).reverse();
+  list.innerHTML = entries.map(e => {
+    const d = new Date(e.ts);
+    const t = d.toLocaleDateString('th') + ' ' + d.toLocaleTimeString('th', {hour:'2-digit',minute:'2-digit'});
+    return \`<div class="audit-row">
+      <span class="audit-time">\${t}</span>
+      <span class="audit-user" style="color:var(--danger)">⚠ \${e.param}</span>
+      <span class="audit-action">\${e.cond==='gt'?'>':'<'}\${e.threshold} (วัดได้: <b>\${e.actual}</b>) [\${e.device}]</span>
+    </div>\`;
+  }).join('');
+}
+
+// ================================================================
+// ENTERPRISE — CSV EXPORT
+// ================================================================
+async function exportCSV() {
+  if (!can('export') || !currentDevice || !currentCompanyKey) { logInfo('เลือกบอร์ดก่อน'); return; }
+  const snap = await db.ref('companies/' + currentCompanyKey + '/devices/' + currentDevice + '/data').get();
+  const d = snap.val();
+  if (!d) { logInfo('ไม่มีข้อมูล'); return; }
+  const ts = new Date().toLocaleString('th');
+  const rows = [
+    ['Field','Value','Timestamp'],
+    ...Object.entries(d).map(([k,v]) => [k, v, ts])
+  ];
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = 'SDU440_' + currentDevice + '_' + Date.now() + '.csv';
+  a.click(); URL.revokeObjectURL(url);
+  await writeAuditLog('export_csv', currentDevice);
+  logInfo('Export CSV สำเร็จ');
+}
+
+// User limit ตาม tier (แก้ได้ใน Firebase companies/{key}/config/userLimit)
+let companyUserLimit = 5;
+async function loadCompanyConfig() {
+  if (!currentCompanyKey) return;
+  const snap = await db.ref('companies/' + currentCompanyKey + '/config').get();
+  const cfg = snap.val() || {};
+  companyUserLimit = cfg.userLimit || 5;
+}
+
+// hook Line Notify token row show/hide
+document.addEventListener('DOMContentLoaded', () => {
+  const ch = document.getElementById('al-channel');
+  if (ch) ch.addEventListener('change', () => {
+    const row = document.getElementById('line-token-row');
+    if (row) row.style.display = ch.value === 'line' ? 'block' : 'none';
+  });
+});
+
+// ================================================================
+// COPY PROTECTION
+// ================================================================
+document.addEventListener('contextmenu', e => e.preventDefault());
+document.addEventListener('copy',        e => e.preventDefault());
+document.addEventListener('cut',         e => e.preventDefault());
+document.addEventListener('selectstart', e => {
+  // อนุญาตให้ select ใน input/textarea ได้ตามปกติ
+  if (['INPUT','TEXTAREA'].includes(e.target.tagName)) return;
+  e.preventDefault();
+});
+document.addEventListener('keydown', e => {
+  const ctrl = e.ctrlKey || e.metaKey;
+  // บล็อก Ctrl+C, Ctrl+A, Ctrl+U (view source), Ctrl+S, F12, Ctrl+Shift+I/J/C
+  if (ctrl && ['c','a','u','s'].includes(e.key.toLowerCase())) { e.preventDefault(); return; }
+  if (e.key === 'F12') { e.preventDefault(); return; }
+  if (ctrl && e.shiftKey && ['i','j','c'].includes(e.key.toLowerCase())) { e.preventDefault(); return; }
+});
+
+// Enter key บนหน้า login
+document.addEventListener('DOMContentLoaded', () => {
+  ['login-email','login-password'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+  });
+});
+</script>
+</body>
+</html>
