@@ -1094,12 +1094,12 @@ async function loadAuditLog() {
   container.innerHTML = entries.map(e => {
     const d = new Date(e.ts);
     const t = d.toLocaleDateString('th') + ' ' + d.toLocaleTimeString('th', {hour:'2-digit',minute:'2-digit'});
-    return \`<div class="audit-row">
-      <span class="audit-time">\${t}</span>
-      <span class="audit-user">\${e.email||e.uid}</span>
-      <span class="role-badge role-\${e.role||'viewer'}" style="margin-right:6px">\${(e.role||'viewer').toUpperCase()}</span>
-      <span class="audit-action"><b>\${e.action}</b>\${e.detail?' — '+e.detail:''} \${e.device&&e.device!=='-'?'['+e.device+']':''}</span>
-    </div>\`;
+    return `<div class="audit-row">
+      <span class="audit-time">${t}</span>
+      <span class="audit-user">${e.email||e.uid}</span>
+      <span class="role-badge role-${e.role||'viewer'}" style="margin-right:6px">${(e.role||'viewer').toUpperCase()}</span>
+      <span class="audit-action"><b>${e.action}</b>${e.detail?' — '+e.detail:''} ${e.device&&e.device!=='-'?'['+e.device+']':''}</span>
+    </div>`;
   }).join('');
 }
 
@@ -1116,17 +1116,17 @@ async function loadUsersPage() {
   const limit = companyUserLimit;
   quota.textContent = 'ใช้ไปแล้ว ' + count + ' / ' + limit + ' บัญชี';
 
-  list.innerHTML = Object.entries(members).map(([uid, m]) => \`
+  list.innerHTML = Object.entries(members).map(([uid, m]) => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="flex:1;font-size:.85rem">\${m.email||uid}</div>
-      <select onchange="changeRole('\${uid}',this.value)" style="width:120px;font-size:.78rem" \${uid===currentUser.uid?'disabled':''}>
-        <option value="admin"    \${m.role==='admin'   ?'selected':''}>Admin</option>
-        <option value="manager"  \${m.role==='manager' ?'selected':''}>Manager</option>
-        <option value="operator" \${m.role==='operator'?'selected':''}>Operator</option>
-        <option value="viewer"   \${m.role==='viewer'  ?'selected':''}>Viewer</option>
+      <div style="flex:1;font-size:.85rem">${m.email||uid}</div>
+      <select onchange="changeRole('${uid}',this.value)" style="width:120px;font-size:.78rem" ${uid===currentUser.uid?'disabled':''}>
+        <option value="admin"    ${m.role==='admin'   ?'selected':''}>Admin</option>
+        <option value="manager"  ${m.role==='manager' ?'selected':''}>Manager</option>
+        <option value="operator" ${m.role==='operator'?'selected':''}>Operator</option>
+        <option value="viewer"   ${m.role==='viewer'  ?'selected':''}>Viewer</option>
       </select>
-      \${uid!==currentUser.uid?\`<button class="btn" style="font-size:.72rem;color:var(--danger)" onclick="removeUser('\${uid}','\${m.email||uid}')">ลบ</button>\`:'<span style="font-size:.72rem;color:var(--muted)">(คุณ)</span>'}
-    </div>\`).join('');
+      ${uid!==currentUser.uid?`<button class="btn" style="font-size:.72rem;color:var(--danger)" onclick="removeUser('${uid}','${m.email||uid}')">ลบ</button>`:'<span style="font-size:.72rem;color:var(--muted)">(คุณ)</span>'}
+    </div>`).join('');
 }
 
 async function changeRole(uid, role) {
@@ -1197,15 +1197,15 @@ function renderAlertRules() {
   if (!list) return;
   const entries = Object.entries(alertRules);
   if (!entries.length) { list.innerHTML = '<div style="color:var(--muted);font-size:.82rem;margin-bottom:10px">ยังไม่มี Alert Rule</div>'; return; }
-  list.innerHTML = entries.map(([key, r]) => \`
-    <div class="alert-row \${r.active?'alert-active':'alert-ok'}">
+  list.innerHTML = entries.map(([key, r]) => `
+    <div class="alert-row ${r.active?'alert-active':'alert-ok'}">
       <div style="flex:1;font-size:.82rem">
-        <b>\${r.param}</b> \${r.cond==='gt'?'>':'<'} <b>\${r.val}</b>
-        <span style="color:var(--muted);margin-left:8px">[\${r.channel||'dashboard'}]</span>
-        \${r.active?'<span style="color:var(--danger);margin-left:6px">🔴 กำลังแจ้งเตือน</span>':'<span style="color:var(--success);margin-left:6px">🟢 ปกติ</span>'}
+        <b>${r.param}</b> ${r.cond==='gt'?'>':'<'} <b>${r.val}</b>
+        <span style="color:var(--muted);margin-left:8px">[${r.channel||'dashboard'}]</span>
+        ${r.active?'<span style="color:var(--danger);margin-left:6px">🔴 กำลังแจ้งเตือน</span>':'<span style="color:var(--success);margin-left:6px">🟢 ปกติ</span>'}
       </div>
-      <button class="btn" style="font-size:.72rem" onclick="deleteAlertRule('\${key}')">ลบ</button>
-    </div>\`).join('');
+      <button class="btn" style="font-size:.72rem" onclick="deleteAlertRule('${key}')">ลบ</button>
+    </div>`).join('');
 }
 
 async function saveAlertRule() {
@@ -1289,11 +1289,11 @@ async function loadAlertHistory() {
   list.innerHTML = entries.map(e => {
     const d = new Date(e.ts);
     const t = d.toLocaleDateString('th') + ' ' + d.toLocaleTimeString('th', {hour:'2-digit',minute:'2-digit'});
-    return \`<div class="audit-row">
-      <span class="audit-time">\${t}</span>
-      <span class="audit-user" style="color:var(--danger)">⚠ \${e.param}</span>
-      <span class="audit-action">\${e.cond==='gt'?'>':'<'}\${e.threshold} (วัดได้: <b>\${e.actual}</b>) [\${e.device}]</span>
-    </div>\`;
+    return `<div class="audit-row">
+      <span class="audit-time">${t}</span>
+      <span class="audit-user" style="color:var(--danger)">⚠ ${e.param}</span>
+      <span class="audit-action">${e.cond==='gt'?'>':'<'}${e.threshold} (วัดได้: <b>${e.actual}</b>) [${e.device}]</span>
+    </div>`;
   }).join('');
 }
 
