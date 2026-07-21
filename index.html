@@ -461,15 +461,7 @@ select{cursor:pointer;font-family:'Prompt',sans-serif}
 // ================================================================
 // 🔥 FIREBASE CONFIG — แก้ตรงนี้ด้วยค่าจาก Firebase Console ของคุณ
 // ================================================================
-const firebaseConfig = {
-  apiKey:            "AIzaSyAg22IszKYWIbi3qzOVedUNQm2Szh0EVjk",
-  authDomain:        "sdu440-3d559.firebaseapp.com",
-  databaseURL:       "https://sdu440-3d559-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId:         "sdu440-3d559",
-  storageBucket:     "sdu440-3d559.firebasestorage.app",
-  messagingSenderId: "704011067937",
-  appId:             "1:704011067937:web:0556b3096e664d1b693960"
-};
+
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db   = firebase.database();
