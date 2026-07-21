@@ -129,7 +129,18 @@ select{cursor:pointer;font-family:'Prompt',sans-serif}
   .monitor-row{grid-template-columns:1fr}
   .cfg-grid{grid-template-columns:1fr}
 }
+
+.chart-wrap{background:var(--bg);border-radius:10px;padding:8px;margin-top:10px}
+.chart-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+.chart-title{font-size:.82rem;font-weight:600;color:var(--text)}
+.chart-legend{display:flex;gap:12px;font-size:.72rem;color:var(--muted)}
+.chart-legend span{display:flex;align-items:center;gap:4px}
+.chart-legend i{width:10px;height:3px;border-radius:2px;display:inline-block}
+.chart-btns{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.chart-btn{padding:4px 10px;border-radius:6px;border:1px solid var(--border);background:var(--surface);color:var(--muted);font-size:.72rem;cursor:pointer;transition:.15s}
+.chart-btn.active{background:var(--accent);color:#000;border-color:var(--accent);font-weight:700}
 </style>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -225,6 +236,26 @@ select{cursor:pointer;font-family:'Prompt',sans-serif}
         <div class="monitor-card"><div class="monitor-label">🎯 เป้าหมาย (SV)</div><div class="monitor-val" id="v-sv" style="color:var(--accent)">--</div><div class="monitor-unit">Set Value</div></div>
         <div class="monitor-card"><div class="monitor-label">⚡ เอาต์พุต (MV)</div><div class="monitor-val" id="v-mv" style="color:var(--warn)">--</div><div class="monitor-unit">%</div></div>
       </div>
+
+      <!-- CHART CARD -->
+      <div class="card" id="chart-card" style="display:none">
+        <div class="chart-header">
+          <span class="chart-title">📈 กราฟอุณหภูมิ Real-time</span>
+          <div class="chart-legend">
+            <span><i style="background:#22d3ee"></i> PV</span>
+            <span><i style="background:#38bdf8"></i> SV</span>
+            <span><i style="background:#fbbf24"></i> MV%</span>
+          </div>
+        </div>
+        <div class="chart-btns">
+          <button class="chart-btn active" onclick="setChartRange(60,'this')">1 นาที</button>
+          <button class="chart-btn" onclick="setChartRange(300,'this')">5 นาที</button>
+          <button class="chart-btn" onclick="setChartRange(900,'this')">15 นาที</button>
+          <button class="chart-btn" onclick="setChartRange(3600,'this')">1 ชม.</button>
+        </div>
+        <div class="chart-wrap"><canvas id="pvChart"></canvas></div>
+      </div>
+
       <div class="card" id="monitor-empty" style="display:none;">
         <div class="empty-state"><div class="icon">📟</div>ยังไม่มีบอร์ด — ไปที่ "จัดการบอร์ด" เพื่อเพิ่มบอร์ดแรกของคุณ</div>
       </div>
@@ -431,14 +462,13 @@ select{cursor:pointer;font-family:'Prompt',sans-serif}
 // 🔥 FIREBASE CONFIG — แก้ตรงนี้ด้วยค่าจาก Firebase Console ของคุณ
 // ================================================================
 const firebaseConfig = {
- apiKey: "AIzaSyAg22IszKYWIbi3qzOVedUNQm2Szh0EVjk",
-  authDomain: "sdu440-3d559.firebaseapp.com",
-  databaseURL: "https://sdu440-3d559-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "sdu440-3d559",
-  storageBucket: "sdu440-3d559.firebasestorage.app",
+  apiKey:            "AIzaSyAg22IszKYWIbi3qzOVedUNQm2Szh0EVjk",
+  authDomain:        "sdu440-3d559.firebaseapp.com",
+  databaseURL:       "https://sdu440-3d559-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId:         "sdu440-3d559",
+  storageBucket:     "sdu440-3d559.firebasestorage.app",
   messagingSenderId: "704011067937",
-  appId: "1:704011067937:web:0556b3096e664d1b693960",
-  measurementId: "G-PC3ZD54NLG"
+  appId:             "1:704011067937:web:0556b3096e664d1b693960"
 };
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
@@ -726,7 +756,11 @@ function onDeviceChange() {
   const devId = document.getElementById('device-selector').value;
   detachDeviceListeners();
   currentDevice = devId || null;
+  // Reset chart
+  chartData = { labels:[], pv:[], sv:[], mv:[] };
+  if (pvChart) { pvChart.data.labels=[]; pvChart.data.datasets.forEach(d=>d.data=[]); pvChart.update(); }
   if (!currentDevice) {
+    document.getElementById('chart-card').style.display = 'none';
     setBadge('sdu', false, 'SDU440: ยังไม่เลือกบอร์ด');
     return;
   }
@@ -741,13 +775,25 @@ const INPT_NAMES = ["K-Type TC","J-Type TC","E-Type TC","N-Type TC","C-Type TC",
 const AL_NAMES   = ["Off","High","Standby Hi","Low","Standby Lo","Dev Hi","Dev Lo","Deviation"];
 
 function listenToDeviceData() {
-  dataListener = db.ref(`devices/${currentDevice}/data`).on('value', snap => {
+  const devDataPath = currentCompanyKey
+    ? 'companies/' + currentCompanyKey + '/devices/' + currentDevice + '/data'
+    : 'devices/' + currentDevice + '/data';
+  dataListener = db.ref(devDataPath).on('value', snap => {
     const d = snap.val();
     if (!d) { setBadge('sdu', false, 'SDU440: ไม่มีข้อมูล'); return; }
 
     setBadge('sdu', d.status === true, d.status ? 'SDU440: Online' : 'SDU440: Error');
+    // Show chart card and init once
+    const cc = document.getElementById('chart-card');
+    if (cc && cc.style.display === 'none') {
+      cc.style.display = 'block';
+      setTimeout(()=>{ initChart(); loadChartHistory(); startHistorySave(); }, 150);
+    }
 
     set('v-pv', d.pv); set('v-sv', d.sv); set('v-sv-tag', d.sv);
+    // Push to real-time chart
+    const _pv = parseFloat(d.pv)||0, _sv = parseFloat(d.sv)||0, _mv = parseFloat(d.mv)||0;
+    if (d.pv != null) pushChartPoint(_pv, _sv, _mv);
     set('v-mv', d.mv!=null ? d.mv+' %' : '--');
     set('v-p', d.P!=null ? (d.P/10).toFixed(1) : '--');
     set('v-i', d.I); set('v-d', d.D); set('v-hys', d.HyS);
@@ -862,6 +908,120 @@ function appendLog(html) {
 </script>
 
 <script>
+
+
+// ================================================================
+// CHART — Real-time PV/SV/MV graph using Chart.js
+// ================================================================
+let pvChart = null;
+let chartData = { labels:[], pv:[], sv:[], mv:[] };
+let chartRangeSec = 60;
+let chartMaxPoints = 60;
+let historyListener = null;
+
+function initChart() {
+  const ctx = document.getElementById('pvChart');
+  if (!ctx || pvChart) return;
+  pvChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chartData.labels,
+      datasets: [
+        { label:'PV', data:chartData.pv, borderColor:'#22d3ee', backgroundColor:'rgba(34,211,238,.08)',
+          borderWidth:2, pointRadius:0, tension:.3, fill:true },
+        { label:'SV', data:chartData.sv, borderColor:'#38bdf8', backgroundColor:'transparent',
+          borderWidth:1.5, borderDash:[4,4], pointRadius:0, tension:.3 },
+        { label:'MV%', data:chartData.mv, borderColor:'#fbbf24', backgroundColor:'transparent',
+          borderWidth:1.5, pointRadius:0, tension:.3, yAxisID:'y2' }
+      ]
+    },
+    options: {
+      animation: false,
+      responsive: true,
+      maintainAspectRatio: false,
+      interaction: { mode:'index', intersect:false },
+      plugins: { legend:{ display:false }, tooltip:{ callbacks:{
+        label: ctx => ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1)
+      }}},
+      scales: {
+        x: { ticks:{ color:'#64748b', maxTicksLimit:6, font:{size:10} }, grid:{ color:'#1e293b' } },
+        y: { ticks:{ color:'#64748b', font:{size:10} }, grid:{ color:'#1e293b' }, title:{ display:true, text:'°C', color:'#64748b', font:{size:10} } },
+        y2: { position:'right', ticks:{ color:'#fbbf24', font:{size:10} }, grid:{ drawOnChartArea:false },
+              title:{ display:true, text:'MV%', color:'#fbbf24', font:{size:10} }, min:0, max:100 }
+      }
+    }
+  });
+  // Fix canvas height
+  ctx.parentElement.style.height = '200px';
+}
+
+function pushChartPoint(pv, sv, mv) {
+  const now = new Date();
+  const label = now.getHours().toString().padStart(2,'0') + ':' +
+                now.getMinutes().toString().padStart(2,'0') + ':' +
+                now.getSeconds().toString().padStart(2,'0');
+  chartData.labels.push(label);
+  chartData.pv.push(pv);
+  chartData.sv.push(sv);
+  chartData.mv.push(mv);
+  // trim to max points
+  while (chartData.labels.length > chartMaxPoints) {
+    chartData.labels.shift(); chartData.pv.shift();
+    chartData.sv.shift(); chartData.mv.shift();
+  }
+  if (pvChart) pvChart.update('none');
+}
+
+function setChartRange(sec, btn) {
+  chartRangeSec = sec;
+  chartMaxPoints = sec;
+  // update button UI
+  document.querySelectorAll('.chart-btn').forEach(b => b.classList.remove('active'));
+  if (btn && btn !== 'this') btn.classList.add('active');
+  // clear and reload from history
+  chartData = { labels:[], pv:[], sv:[], mv:[] };
+  if (pvChart) { pvChart.data.labels = chartData.labels; pvChart.data.datasets[0].data = chartData.pv; pvChart.data.datasets[1].data = chartData.sv; pvChart.data.datasets[2].data = chartData.mv; pvChart.update(); }
+  loadChartHistory();
+}
+
+async function loadChartHistory() {
+  if (!currentDevice || !currentCompanyKey) return;
+  const since = Date.now() - chartRangeSec * 1000;
+  const snap = await db.ref('companies/' + currentCompanyKey + '/history/' + currentDevice)
+    .orderByChild('ts').startAt(since).limitToLast(chartMaxPoints).get();
+  if (!snap.val()) return;
+  const pts = Object.values(snap.val()).sort((a,b) => a.ts - b.ts);
+  chartData = { labels:[], pv:[], sv:[], mv:[] };
+  pts.forEach(p => {
+    const d = new Date(p.ts);
+    chartData.labels.push(d.getHours().toString().padStart(2,'0')+':'+d.getMinutes().toString().padStart(2,'0')+':'+d.getSeconds().toString().padStart(2,'0'));
+    chartData.pv.push(p.pv ?? null);
+    chartData.sv.push(p.sv ?? null);
+    chartData.mv.push(p.mv ?? null);
+  });
+  if (pvChart) {
+    pvChart.data.labels = chartData.labels;
+    pvChart.data.datasets[0].data = chartData.pv;
+    pvChart.data.datasets[1].data = chartData.sv;
+    pvChart.data.datasets[2].data = chartData.mv;
+    pvChart.update();
+  }
+}
+
+// Save history point every 10s
+let histSaveInterval = null;
+function startHistorySave() {
+  if (histSaveInterval) clearInterval(histSaveInterval);
+  histSaveInterval = setInterval(saveHistoryPoint, 10000);
+}
+async function saveHistoryPoint() {
+  if (!currentDevice || !currentCompanyKey) return;
+  const pv = parseFloat(document.getElementById('v-pv')?.textContent) || null;
+  const sv = parseFloat(document.getElementById('v-sv')?.textContent) || null;
+  const mv = parseFloat(document.getElementById('v-mv')?.textContent) || null;
+  if (pv === null) return;
+  await db.ref('companies/' + currentCompanyKey + '/history/' + currentDevice).push({ pv, sv, mv, ts: Date.now() });
+}
 
 // ================================================================
 // ENTERPRISE — ROLES
