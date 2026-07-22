@@ -1,4 +1,3 @@
-ทดสอบ
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -543,7 +542,7 @@ function doLogin() {
 }
 
 // ================================================================
-// SIGNUP — สมัครพร้อมชื่อบริษัท (จำกัด 5 บัญชีต่อบริษัท)
+// SIGNUP — คนแรกของบริษัท = Admin อัตโนมัติ / คนถัดไป = Pending รออนุมัติ
 // ================================================================
 async function doSignup() {
   const company = document.getElementById('signup-company').value.trim();
@@ -556,48 +555,59 @@ async function doSignup() {
   if (pass.length < 6) { showAuthMsg('Password ต้องมีอย่างน้อย 6 ตัวอักษร', false); return; }
   if (pass !== pass2)  { showAuthMsg('Password ไม่ตรงกัน', false); return; }
 
-  // ชื่อบริษัท → key ใน Firebase (ตัดอักขระพิเศษ)
   const companyKey = company.replace(/[.#$\[\]/]/g, '_');
-
-  showAuthMsg('กำลังตรวจสอบโควต้า...', true);
+  showAuthMsg('กำลังตรวจสอบ...', true);
 
   try {
-    // เช็คจำนวน member ปัจจุบันของบริษัทนั้น
-    const snap = await db.ref('companies/' + companyKey + '/members').get();
-    const members = snap.val() || {};
-    const count = Object.keys(members).length;
-
-    if (count >= 5) {
-      showAuthMsg('บริษัทนี้มีบัญชีครบ 5 บัญชีแล้ว ไม่สามารถสมัครเพิ่มได้', false);
-      return;
-    }
-
-    // แสดง quota
-    document.getElementById('signup-quota').style.display = 'block';
-    document.getElementById('quota-used').textContent = count;
-
     showAuthMsg('กำลังสมัครสมาชิก...', true);
 
-    // สร้าง user ใน Firebase Auth
+    // 1. สร้าง user ก่อน แล้ว login อัตโนมัติ
     const cred = await auth.createUserWithEmailAndPassword(email, pass);
     const uid  = cred.user.uid;
 
-    // บันทึก member ใต้ companies/{companyKey}/members/{uid}
-    await db.ref('companies/' + companyKey + '/members/' + uid).set({
-      email:     email,
-      joinedAt:  Date.now(),
-      companyName: company
+    // 2. ตอนนี้ auth พร้อมแล้ว อ่าน members ได้
+    const snap = await db.ref('companies/' + companyKey + '/members').get();
+    const members = snap.val() || {};
+    const allMembers = Object.values(members);
+    const activeCount = allMembers.filter(m => m.status === 'active').length;
+    const totalCount  = allMembers.length;
+
+    if (totalCount >= 20) {
+      await auth.signOut();
+      showAuthMsg('บริษัทนี้มีสมาชิกครบ 20 คนแล้ว', false); return;
+    }
+
+    document.getElementById('signup-quota').style.display = 'block';
+    document.getElementById('quota-used').textContent = activeCount;
+
+    const isFirstMember = activeCount === 0;
+    const memberData = {
+      email:       email,
+      joinedAt:    Date.now(),
+      companyName: company,
+      role:        isFirstMember ? 'admin' : 'viewer',
+      status:      isFirstMember ? 'active' : 'pending'
+    };
+
+    // 3. เขียน database หลัง login แล้ว
+    await db.ref('companies/' + companyKey + '/members/' + uid).set(memberData);
+    await db.ref('users/' + uid).set({
+      company:     companyKey,
+      companyName: company,
+      status:      memberData.status
     });
 
-    // บันทึก companyKey ใน users/{uid}/company เพื่อใช้ตอน login
-    await db.ref('users/' + uid + '/company').set(companyKey);
-    await db.ref('users/' + uid + '/companyName').set(company);
-
-    showAuthMsg('สมัครสมาชิกสำเร็จ! กำลังเข้าสู่ระบบ...', true);
+    if (isFirstMember) {
+      showAuthMsg('สมัครสำเร็จ! คุณเป็น Admin คนแรกของบริษัทนี้ 🎉', true);
+    } else {
+      showAuthMsg('สมัครสำเร็จ! รอ Admin ของบริษัทอนุมัติก่อนจึงจะเข้าใช้ได้ ⏳', true);
+      setTimeout(() => auth.signOut(), 2500);
+    }
 
   } catch(e) {
-   showAuthMsg('Error: ' + (e.code || e.message || JSON.stringify(e)), false);
-console.error("Signup error details:", e);
+    const msg = translateAuthError(e.code);
+    showAuthMsg(msg !== ('เกิดข้อผิดพลาด: ' + e.code) ? msg : (e.message || 'เกิดข้อผิดพลาด'), false);
+    console.error('Signup error:', e.code, e.message);
   }
 }
 
@@ -644,11 +654,25 @@ auth.onAuthStateChanged(async user => {
       chip.textContent = user.email + ' · ' + cName;
     }
 
+    // เช็ค status ว่า pending หรือ active
+    if (currentCompanyKey) {
+      const statusSnap = await db.ref('companies/' + currentCompanyKey + '/members/' + user.uid + '/status').get();
+      const memberStatus = statusSnap.val();
+      if (memberStatus === 'pending') {
+        showAuthMsg('บัญชีของคุณยังรอ Admin อนุมัติอยู่ กรุณารอสักครู่', false);
+        document.getElementById('auth-screen').style.display = 'flex';
+        document.getElementById('app').style.display = 'none';
+        auth.signOut();
+        return;
+      }
+    }
+
     loadUserDevices();
     await loadCompanyConfig();
     await loadCurrentUserRole();
     await checkPendingInvite();
     await loadAlertRules();
+    await checkSuperAdmin();
     startAlertMonitor();
   } else {
     detachDeviceListeners();
@@ -1039,6 +1063,7 @@ async function loadCurrentUserRole() {
 }
 
 function can(action) {
+  if (isSuperAdmin) return true; // Super Admin ทำได้ทุกอย่าง
   const lvl = ROLES[currentUserRole] || 1;
   if (action === 'edit_params')   return lvl >= 3;
   if (action === 'send_command')  return lvl >= 2;
@@ -1118,10 +1143,34 @@ async function loadUsersPage() {
   const limit = companyUserLimit;
   quota.textContent = 'ใช้ไปแล้ว ' + count + ' / ' + limit + ' บัญชี';
 
-  list.innerHTML = Object.entries(members).map(([uid, m]) => `
+  // แยก pending กับ active
+  const pendingMembers = Object.entries(members).filter(([,m]) => m.status === 'pending');
+  const activeMembers  = Object.entries(members).filter(([,m]) => m.status !== 'pending');
+
+  let html = '';
+
+  if (pendingMembers.length) {
+    html += `<div style="font-size:.78rem;font-weight:600;color:var(--warn);margin-bottom:8px;padding:6px 10px;background:rgba(251,191,36,.08);border-radius:6px;border-left:3px solid var(--warn)">
+      ⏳ รออนุมัติ (${pendingMembers.length} คน)</div>`;
+    html += pendingMembers.map(([uid, m]) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;font-size:.85rem;color:var(--warn)">${m.email||uid}</div>
+        <select id="role-pending-${uid}" style="width:110px;font-size:.78rem">
+          <option value="manager">Manager</option>
+          <option value="operator" selected>Operator</option>
+          <option value="viewer">Viewer</option>
+        </select>
+        <button class="btn" style="font-size:.72rem;background:var(--success);color:#000" onclick="approveUser('${uid}','${m.email||uid}')">✓ อนุมัติ</button>
+        <button class="btn" style="font-size:.72rem;background:var(--danger)" onclick="rejectUser('${uid}','${m.email||uid}')">✗ ปฏิเสธ</button>
+      </div>`).join('');
+  }
+
+  html += `<div style="font-size:.78rem;font-weight:600;color:var(--muted);margin:12px 0 8px">✅ สมาชิกที่ใช้งานได้ (${activeMembers.length} คน)</div>`;
+  html += activeMembers.map(([uid, m]) => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
       <div style="flex:1;font-size:.85rem">${m.email||uid}</div>
-      <select onchange="changeRole('${uid}',this.value)" style="width:120px;font-size:.78rem" ${uid===currentUser.uid?'disabled':''}>
+      <span class="role-badge role-${m.role||'viewer'}">${(m.role||'viewer').toUpperCase()}</span>
+      <select onchange="changeRole('${uid}',this.value)" style="width:110px;font-size:.78rem" ${uid===currentUser.uid?'disabled':''}>
         <option value="admin"    ${m.role==='admin'   ?'selected':''}>Admin</option>
         <option value="manager"  ${m.role==='manager' ?'selected':''}>Manager</option>
         <option value="operator" ${m.role==='operator'?'selected':''}>Operator</option>
@@ -1129,6 +1178,8 @@ async function loadUsersPage() {
       </select>
       ${uid!==currentUser.uid?`<button class="btn" style="font-size:.72rem;color:var(--danger)" onclick="removeUser('${uid}','${m.email||uid}')">ลบ</button>`:'<span style="font-size:.72rem;color:var(--muted)">(คุณ)</span>'}
     </div>`).join('');
+
+  list.innerHTML = html;
 }
 
 async function changeRole(uid, role) {
@@ -1179,6 +1230,56 @@ async function checkPendingInvite() {
   await db.ref('companies/' + currentCompanyKey + '/pendingInvites/' + emailKey).remove();
   currentUserRole = inv.role;
   logInfo('ได้รับสิทธิ์ ' + inv.role + ' จาก ' + inv.invitedBy);
+}
+
+// ================================================================
+// ENTERPRISE — APPROVE / REJECT PENDING MEMBERS
+// ================================================================
+async function approveUser(uid, email) {
+  const role = document.getElementById('role-pending-' + uid)?.value || 'operator';
+  await db.ref('companies/' + currentCompanyKey + '/members/' + uid).update({
+    status: 'active', role: role, approvedBy: currentUser.email, approvedAt: Date.now()
+  });
+  await db.ref('users/' + uid + '/status').set('active');
+  await writeAuditLog('approve_user', email + ' as ' + role);
+  logInfo('อนุมัติ ' + email + ' เป็น ' + role + ' แล้ว');
+  loadUsersPage();
+}
+
+async function rejectUser(uid, email) {
+  if (!confirm('ปฏิเสธและลบ ' + email + ' ออกจากระบบ?')) return;
+  await db.ref('companies/' + currentCompanyKey + '/members/' + uid).remove();
+  await db.ref('users/' + uid).remove();
+  // ลบออกจาก Firebase Auth ไม่ได้จาก client แต่ user จะเข้าไม่ได้เพราะไม่มีใน members
+  await writeAuditLog('reject_user', email);
+  logInfo('ปฏิเสธ ' + email + ' แล้ว');
+  loadUsersPage();
+}
+
+// ================================================================
+// SUPER ADMIN — ทำได้ทุกอย่างทุกบริษัท (กำหนด email ใน Firebase superAdmins/{email})
+// ================================================================
+let isSuperAdmin = false;
+
+async function checkSuperAdmin() {
+  if (!currentUser) return;
+  const emailKey = currentUser.email.replace(/[.#$\[\]/]/g, '_');
+  const snap = await db.ref('superAdmins/' + emailKey).get();
+  isSuperAdmin = snap.val() === true;
+  if (isSuperAdmin) {
+    logInfo('⚡ Super Admin mode active');
+    // แสดง nav พิเศษ
+    const nav = document.querySelector('.sidebar');
+    if (nav && !document.getElementById('nav-superadmin')) {
+      const sec = document.createElement('div');
+      sec.className = 'nav-section'; sec.textContent = 'Super Admin';
+      const item = document.createElement('div');
+      item.className = 'nav-item'; item.id = 'nav-superadmin';
+      item.innerHTML = '<span class="nav-icon">⚡</span>จัดการทุกบริษัท';
+      item.onclick = () => showPage('pg-superadmin', item);
+      nav.appendChild(sec); nav.appendChild(item);
+    }
+  }
 }
 
 // ================================================================
