@@ -1,4 +1,4 @@
-ทดสอบ
+ทดสอบ 1
 <!DOCTYPE html>
 <html lang="th">
 <head>
@@ -23,25 +23,116 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Prompt',sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
 
-/* ===== LOGIN / SIGNUP ===== */
-#auth-screen{display:flex;align-items:center;justify-content:center;min-height:100vh;padding:20px}
-.auth-card{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:36px;width:100%;max-width:400px}
-.auth-logo{text-align:center;margin-bottom:24px}
-.auth-logo h1{font-size:1.6rem;color:var(--accent);font-family:'JetBrains Mono',monospace}
-.auth-logo p{color:var(--muted);font-size:.85rem;margin-top:4px}
+/* ===== LOGIN / SIGNUP — single console panel over tech-grid backdrop ===== */
+#auth-screen{
+  position:relative;display:flex;align-items:center;justify-content:center;
+  min-height:100vh;padding:24px;overflow:hidden;
+  background:
+    radial-gradient(circle at 18% 20%, rgba(56,189,248,.16), transparent 42%),
+    radial-gradient(circle at 82% 78%, rgba(56,189,248,.10), transparent 46%),
+    var(--bg);
+}
+#auth-screen::before{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(148,163,184,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(148,163,184,.06) 1px, transparent 1px);
+  background-size:36px 36px;
+  mask-image:radial-gradient(circle at 50% 38%, #000 0%, transparent 78%);
+}
+#auth-screen::after{
+  content:'';position:absolute;inset:0;pointer-events:none;
+  background-image:
+    linear-gradient(rgba(56,189,248,.09) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(56,189,248,.09) 1px, transparent 1px);
+  background-size:180px 180px;
+  mask-image:radial-gradient(circle at 50% 38%, #000 0%, transparent 55%);
+}
+
+.auth-eyebrow{display:flex;align-items:center;justify-content:center;gap:8px;font-family:'JetBrains Mono',monospace;font-size:.7rem;letter-spacing:.12em;color:var(--accent);text-transform:uppercase;margin-bottom:14px}
+.auth-eyebrow .live-dot{width:6px;height:6px;border-radius:50%;background:var(--success);box-shadow:0 0 6px var(--success);animation:pulse-dot 1.8s infinite}
+@keyframes pulse-dot{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* live readout strip (signature element) */
+.auth-live{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0 20px}
+.auth-live-cell{background:rgba(17,24,39,.6);border:1px solid var(--border);border-radius:9px;padding:9px 8px;text-align:center;backdrop-filter:blur(2px)}
+.auth-live-cell .lbl{font-size:.62rem;color:var(--muted);letter-spacing:.06em;text-transform:uppercase}
+.auth-live-cell .val{font-family:'JetBrains Mono',monospace;font-size:1.08rem;font-weight:700;color:var(--text);margin-top:2px}
+.auth-live-cell.pv .val{color:var(--success)}
+.auth-live-cell.sv .val{color:var(--accent)}
+.auth-live-cell.mv .val{color:var(--warn)}
+
+.feature-strip{display:flex;justify-content:center;gap:18px;margin-bottom:22px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.feature-item{display:flex;flex-direction:column;align-items:center;gap:5px;max-width:100px;text-align:center}
+.feature-icon{width:30px;height:30px;flex-shrink:0;border-radius:8px;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.25);display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.feature-item span{font-size:.66rem;color:var(--muted);line-height:1.35}
+
+/* --- single centered card --- */
+.auth-card{position:relative;width:100%;max-width:400px;background:rgba(17,24,39,.78);border:1px solid var(--border);border-radius:18px;padding:36px;backdrop-filter:blur(10px);box-shadow:0 20px 60px -20px rgba(0,0,0,.6)}
+.auth-card-mobile-logo{display:none}
+.auth-logo{text-align:center;margin-bottom:6px}
+.auth-logo h1{font-family:'JetBrains Mono',monospace;font-size:1.8rem;color:#fff;font-weight:700;letter-spacing:-.01em}
+.auth-logo h1 .brand-accent{color:var(--accent)}
+.auth-logo p{color:var(--muted);font-size:.83rem;margin-top:4px}
+
 .form-row{margin-bottom:14px}
-.form-row label{display:block;font-size:.82rem;color:#94a3b8;margin-bottom:5px}
-.form-row input{width:100%;background:var(--bg);border:1px solid var(--border2);color:#fff;padding:10px 12px;border-radius:8px;font-size:.9rem}
-.form-row input:focus{outline:none;border-color:var(--accent)}
-.btn-auth{width:100%;background:var(--accent);color:#000;border:none;padding:12px;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;margin-top:6px}
+.form-row label{display:block;font-size:.8rem;color:#94a3b8;margin-bottom:6px;font-weight:500}
+.input-wrap{position:relative;display:flex;align-items:center}
+.input-icon{position:absolute;left:12px;font-size:.85rem;opacity:.6;pointer-events:none}
+.form-row input{width:100%;background:var(--card);border:1px solid var(--border2);color:#fff;padding:11px 12px 11px 34px;border-radius:9px;font-size:.9rem;transition:border-color .15s,box-shadow .15s}
+.form-row input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(56,189,248,.12)}
+.pw-toggle{position:absolute;right:6px;background:none;border:none;color:var(--muted);cursor:pointer;padding:6px 8px;font-size:.85rem;border-radius:6px}
+.pw-toggle:hover{color:var(--accent)}
+
+.form-options{display:flex;align-items:center;justify-content:space-between;margin:-2px 0 16px}
+.remember-row{display:flex;align-items:center;gap:7px;font-size:.79rem;color:#94a3b8;cursor:pointer;user-select:none}
+.remember-row input{accent-color:var(--accent);width:14px;height:14px;cursor:pointer}
+.forgot-link,.back-link{font-size:.79rem;color:var(--accent);cursor:pointer;background:none;border:none;font-family:inherit}
+.forgot-link:hover,.back-link:hover{text-decoration:underline}
+.back-link{display:inline-flex;align-items:center;gap:4px;margin-top:16px;justify-content:center;width:100%}
+
+.btn-auth{position:relative;width:100%;background:var(--accent);color:#000;border:none;padding:12px;border-radius:9px;font-size:.92rem;font-weight:700;cursor:pointer;margin-top:6px;transition:background .15s,opacity .15s}
 .btn-auth:hover{background:var(--accent2)}
+.btn-auth:disabled{cursor:not-allowed;opacity:.75}
+.btn-auth .btn-text{transition:opacity .15s}
+.btn-auth.loading .btn-text{opacity:0}
+.btn-auth.loading::after{
+  content:'';position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
+  border:2px solid rgba(0,0,0,.25);border-top-color:#000;border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
 .auth-msg{border-radius:8px;padding:10px 14px;font-size:.83rem;margin-top:12px;display:none}
 .auth-msg.err{background:rgba(248,113,113,.1);border:1px solid rgba(248,113,113,.3);color:var(--danger)}
 .auth-msg.ok{background:rgba(74,222,128,.1);border:1px solid rgba(74,222,128,.3);color:var(--success)}
-.auth-tabs{display:flex;gap:6px;margin-bottom:20px;background:var(--bg);border-radius:8px;padding:4px}
+
+.btn-google{position:relative;width:100%;display:flex;align-items:center;justify-content:center;gap:10px;background:#fff;color:#1f2937;border:1px solid #dcdfe5;padding:11px;border-radius:9px;font-size:.88rem;font-weight:600;cursor:pointer;transition:background .15s,opacity .15s;margin-bottom:16px}
+.btn-google:hover{background:#f3f4f6}
+.btn-google:disabled{cursor:not-allowed;opacity:.7}
+.btn-google .btn-text{display:flex;align-items:center;gap:10px;transition:opacity .15s}
+.btn-google.loading .btn-text{opacity:0}
+.btn-google.loading::after{
+  content:'';position:absolute;left:50%;top:50%;width:16px;height:16px;margin:-8px 0 0 -8px;
+  border:2px solid rgba(31,41,55,.25);border-top-color:#1f2937;border-radius:50%;
+  animation:spin .7s linear infinite;
+}
+.auth-divider{display:flex;align-items:center;gap:12px;margin:2px 0 16px;color:var(--muted);font-size:.72rem;letter-spacing:.05em}
+.auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+.auth-tabs{display:flex;gap:6px;margin-bottom:22px;background:var(--card);border:1px solid var(--border);border-radius:9px;padding:4px}
 .auth-tab{flex:1;text-align:center;padding:8px;border-radius:6px;cursor:pointer;font-size:.85rem;color:var(--muted);transition:all .2s}
 .auth-tab.active{background:var(--accent);color:#000;font-weight:700}
 .company-badge{display:inline-block;background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.3);color:var(--accent);border-radius:6px;padding:3px 10px;font-size:.78rem;margin-bottom:14px;width:100%;text-align:center}
+.pw-hint{font-size:.72rem;color:var(--muted);margin-top:5px}
+.security-note{display:flex;align-items:center;gap:6px;justify-content:center;font-size:.72rem;color:var(--muted);margin-top:24px}
+
+@media(max-width:520px){
+  .auth-card{padding:26px 22px}
+  .feature-strip{gap:10px}
+  .feature-item{max-width:80px}
+}
+
 .role-badge{display:inline-block;border-radius:4px;padding:2px 8px;font-size:.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
 .role-admin{background:rgba(248,113,113,.15);color:#f87171}
 .role-manager{background:rgba(251,191,36,.15);color:#fbbf24}
@@ -55,6 +146,37 @@ body{font-family:'Prompt',sans-serif;background:var(--bg);color:var(--text);min-
 .alert-active{border-left:3px solid var(--danger)}
 .alert-ok{border-left:3px solid var(--success)}
 .perm-lock{color:var(--muted);cursor:not-allowed;opacity:.5}
+
+/* ===== UNIFIED DATA LIST SYSTEM (users / audit / alerts) ===== */
+.list-section-label{display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:var(--muted);padding:7px 10px;margin:2px 0 6px;border-radius:6px;background:rgba(148,163,184,.06);border-left:3px solid var(--muted)}
+.list-section-label.warn{color:var(--warn);background:rgba(251,191,36,.08);border-left-color:var(--warn)}
+.list-section-label.danger{color:var(--danger);background:rgba(248,113,113,.08);border-left-color:var(--danger)}
+.list-section-label.success{color:var(--success);background:rgba(74,222,128,.08);border-left-color:var(--success)}
+.list-section-label .count{margin-left:auto;font-weight:400;text-transform:none;letter-spacing:0;opacity:.75}
+
+.list-row{display:flex;align-items:center;gap:11px;padding:9px 6px;border-bottom:1px solid var(--border);transition:background .15s}
+.list-row:last-child{border-bottom:none}
+.list-row:hover{background:rgba(148,163,184,.045)}
+.list-row.is-removed{opacity:.55}
+.list-row.is-pending{background:rgba(251,191,36,.035)}
+.list-row.is-danger{border-left:3px solid var(--danger);background:rgba(248,113,113,.03)}
+.list-row.is-ok{border-left:3px solid var(--success)}
+
+.avatar{width:30px;height:30px;border-radius:50%;background:rgba(56,189,248,.12);border:1px solid rgba(56,189,248,.3);color:var(--accent);display:flex;align-items:center;justify-content:center;font-size:.76rem;font-weight:700;flex-shrink:0;font-family:'JetBrains Mono',monospace;text-transform:uppercase}
+.avatar.warn{background:rgba(251,191,36,.12);border-color:rgba(251,191,36,.3);color:var(--warn)}
+.avatar.muted{background:rgba(148,163,184,.1);border-color:rgba(148,163,184,.25);color:var(--muted)}
+.avatar.danger{background:rgba(248,113,113,.12);border-color:rgba(248,113,113,.3);color:var(--danger)}
+
+.list-row-main{flex:1;min-width:0}
+.list-row-primary{font-size:.84rem;color:var(--text);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.list-row-primary .email{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:220px}
+.list-row-secondary{font-size:.72rem;color:var(--muted);margin-top:2px}
+.list-row-secondary b{color:#94a3b8;font-weight:600}
+.list-row-meta{display:flex;align-items:center;gap:7px;flex-shrink:0}
+.list-row-time{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--muted);min-width:76px;flex-shrink:0}
+.list-row.strike .list-row-primary .email{text-decoration:line-through;color:var(--muted)}
+
+.list-empty{text-align:center;padding:22px 10px;color:var(--muted);font-size:.82rem}
 
 /* ===== APP ===== */
 #app{display:none}
@@ -97,7 +219,10 @@ body{font-family:'Prompt',sans-serif;background:var(--bg);color:var(--text);min-
 .card{background:var(--card);border:1px solid var(--border);border-radius:11px;padding:18px}
 .card-title{font-size:.87rem;font-weight:600;color:#94a3b8;display:flex;align-items:center;gap:7px;margin-bottom:14px;padding-bottom:11px;border-bottom:1px solid var(--border)}
 
-.param-row{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-radius:7px;background:var(--bg);border:1px solid var(--border);margin-bottom:7px;gap:10px}
+.param-row{display:flex;align-items:center;justify-content:space-between;padding:9px 13px;border-radius:7px;background:var(--bg);border:1px solid var(--border);margin-bottom:7px;gap:10px;transition:border-color .15s}
+.param-row:hover{border-color:var(--border2)}
+.btn-outline-danger.btn{background:transparent;border:1px solid var(--border2);color:var(--danger)}
+.btn-outline-danger.btn:hover{background:rgba(248,113,113,.08);border-color:var(--danger)}
 .param-label{font-size:.84rem;color:#cbd5e1;flex:1}
 .param-label small{display:block;font-size:.71rem;color:var(--muted);font-family:'JetBrains Mono',monospace}
 .param-action{display:flex;align-items:center;gap:7px;flex-shrink:0}
@@ -150,38 +275,122 @@ select{cursor:pointer;font-family:'Prompt',sans-serif}
 <!-- ================================================================ -->
 <div id="auth-screen">
   <div class="auth-card">
+
+    <div class="auth-eyebrow"><span class="live-dot"></span> SYSTEM ONLINE</div>
+
     <div class="auth-logo">
-      <h1>SDU440</h1>
+      <h1>SDU<span class="brand-accent">440</span></h1>
       <p>IoT Control Center</p>
     </div>
 
+    <div class="auth-live">
+      <div class="auth-live-cell pv"><div class="lbl">PV</div><div class="val" id="demo-pv">82.4°</div></div>
+      <div class="auth-live-cell sv"><div class="lbl">SV</div><div class="val" id="demo-sv">85.0°</div></div>
+      <div class="auth-live-cell mv"><div class="lbl">MV</div><div class="val" id="demo-mv">61%</div></div>
+    </div>
+
+    <div class="feature-strip">
+      <div class="feature-item"><div class="feature-icon">📡</div><span>Real-time Monitor</span></div>
+      <div class="feature-item"><div class="feature-icon">🔐</div><span>แบ่งสิทธิ์การใช้งาน</span></div>
+      <div class="feature-item"><div class="feature-icon">📋</div><span>Audit Log</span></div>
+    </div>
+
+    <h2 id="auth-title" style="font-size:1.05rem;color:#fff;font-weight:600;margin-bottom:4px">เข้าสู่ระบบ</h2>
+    <p id="auth-subtitle" style="color:var(--muted);font-size:.82rem;margin-bottom:18px">ยินดีต้อนรับกลับ กรอกข้อมูลเพื่อเข้าใช้งาน</p>
+
+    <!-- Google Sign-in -->
+    <div id="google-signin-block">
+      <button type="button" class="btn-google" id="btn-google" onclick="doGoogleLogin()">
+        <span class="btn-text">
+          <svg width="18" height="18" viewBox="0 0 18 18"><path fill="#4285F4" d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84c-.21 1.13-.84 2.09-1.8 2.73v2.27h2.91c1.7-1.57 2.69-3.88 2.69-6.64z"/><path fill="#34A853" d="M9 18c2.43 0 4.47-.8 5.96-2.17l-2.91-2.27c-.81.54-1.84.86-3.05.86-2.35 0-4.34-1.58-5.05-3.71H.96v2.34C2.44 15.98 5.48 18 9 18z"/><path fill="#FBBC05" d="M3.95 10.71A5.4 5.4 0 013.68 9c0-.6.1-1.18.27-1.71V4.95H.96A9 9 0 000 9c0 1.45.35 2.83.96 4.05l2.99-2.34z"/><path fill="#EA4335" d="M9 3.58c1.32 0 2.51.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0 5.48 0 2.44 2.02.96 4.95l2.99 2.34C4.66 5.16 6.65 3.58 9 3.58z"/></svg>
+          Continue with Google
+        </span>
+      </button>
+      <div class="auth-divider">OR</div>
+    </div>
+
     <!-- Tabs -->
-    <div class="auth-tabs">
+    <div class="auth-tabs" id="auth-tabs">
       <div class="auth-tab active" id="tab-login" onclick="switchAuthTab('login')">เข้าสู่ระบบ</div>
       <div class="auth-tab" id="tab-signup" onclick="switchAuthTab('signup')">สมัครสมาชิก</div>
     </div>
 
+    <!-- Complete profile (first-time Google sign-in — needs a company) -->
+    <div id="form-complete-profile" style="display:none;">
+      <div class="company-badge" style="margin-bottom:14px" id="complete-profile-email"></div>
+      <div class="form-row">
+        <label>ชื่อบริษัท / องค์กร</label>
+        <div class="input-wrap"><span class="input-icon">🏢</span><input type="text" id="complete-company" placeholder="เช่น บริษัท ABC จำกัด — พิมพ์ให้ตรงกับที่มีอยู่แล้วถ้าจะเข้าร่วม" autocomplete="organization"></div>
+      </div>
+      <button class="btn-auth" id="btn-complete-profile" onclick="doCompleteProfile()"><span class="btn-text">เข้าร่วม / สร้างบริษัท</span></button>
+      <div class="back-link" onclick="cancelCompleteProfile()">← ออกจากระบบ / ใช้บัญชีอื่น</div>
+    </div>
+
     <!-- Login Form -->
     <div id="form-login">
-      <div class="form-row"><label>Email</label><input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"></div>
-      <div class="form-row"><label>Password</label><input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password"></div>
-      <button class="btn-auth" onclick="doLogin()">เข้าสู่ระบบ</button>
+      <div class="form-row">
+        <label>Email</label>
+        <div class="input-wrap"><span class="input-icon">✉️</span><input type="email" id="login-email" placeholder="you@example.com" autocomplete="email"></div>
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="login-password" placeholder="••••••••" autocomplete="current-password">
+          <button type="button" class="pw-toggle" onclick="togglePw('login-password',this)">👁</button>
+        </div>
+      </div>
+      <div class="form-options">
+        <label class="remember-row"><input type="checkbox" id="login-remember" checked> จดจำการเข้าสู่ระบบ</label>
+        <button type="button" class="forgot-link" onclick="showForgotPassword()">ลืมรหัสผ่าน?</button>
+      </div>
+      <button class="btn-auth" id="btn-login" onclick="doLogin()"><span class="btn-text">เข้าสู่ระบบ</span></button>
     </div>
 
     <!-- Signup Form -->
     <div id="form-signup" style="display:none;">
       <div class="form-row">
         <label>ชื่อบริษัท / องค์กร</label>
-        <input type="text" id="signup-company" placeholder="เช่น บริษัท ABC จำกัด" autocomplete="organization">
+        <div class="input-wrap"><span class="input-icon">🏢</span><input type="text" id="signup-company" placeholder="เช่น บริษัท ABC จำกัด" autocomplete="organization"></div>
       </div>
-      <div class="form-row"><label>Email</label><input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email"></div>
-      <div class="form-row"><label>Password (อย่างน้อย 6 ตัวอักษร)</label><input type="password" id="signup-password" placeholder="••••••••"></div>
-      <div class="form-row"><label>ยืนยัน Password</label><input type="password" id="signup-password2" placeholder="••••••••"></div>
+      <div class="form-row">
+        <label>Email</label>
+        <div class="input-wrap"><span class="input-icon">✉️</span><input type="email" id="signup-email" placeholder="you@example.com" autocomplete="email"></div>
+      </div>
+      <div class="form-row">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="signup-password" placeholder="••••••••" autocomplete="new-password">
+          <button type="button" class="pw-toggle" onclick="togglePw('signup-password',this)">👁</button>
+        </div>
+        <div class="pw-hint">อย่างน้อย 6 ตัวอักษร</div>
+      </div>
+      <div class="form-row">
+        <label>ยืนยัน Password</label>
+        <div class="input-wrap">
+          <span class="input-icon">🔒</span>
+          <input type="password" id="signup-password2" placeholder="••••••••" autocomplete="new-password">
+          <button type="button" class="pw-toggle" onclick="togglePw('signup-password2',this)">👁</button>
+        </div>
+      </div>
       <div id="signup-quota" style="display:none;" class="company-badge">📊 ใช้ไปแล้ว <span id="quota-used">0</span>/5 บัญชี</div>
-      <button class="btn-auth" onclick="doSignup()">สมัครสมาชิก</button>
+      <button class="btn-auth" id="btn-signup" onclick="doSignup()"><span class="btn-text">สมัครสมาชิก</span></button>
+    </div>
+
+    <!-- Forgot Password Form -->
+    <div id="form-forgot" style="display:none;">
+      <div class="form-row">
+        <label>อีเมลที่ใช้สมัครสมาชิก</label>
+        <div class="input-wrap"><span class="input-icon">✉️</span><input type="email" id="forgot-email" placeholder="you@example.com" autocomplete="email"></div>
+      </div>
+      <button class="btn-auth" id="btn-forgot" onclick="doForgotPassword()"><span class="btn-text">ส่งลิงก์รีเซ็ตรหัสผ่าน</span></button>
+      <div class="back-link" onclick="backToLogin()">← กลับไปหน้าเข้าสู่ระบบ</div>
     </div>
 
     <div class="auth-msg" id="auth-msg"></div>
+
+    <div class="security-note">🔒 เชื่อมต่อแบบเข้ารหัส · ข้อมูลของคุณปลอดภัย</div>
   </div>
 </div>
 
@@ -365,25 +574,13 @@ select{cursor:pointer;font-family:'Prompt',sans-serif}
         <div class="card-title">👥 จัดการผู้ใช้ในองค์กร</div>
         <div id="users-quota" style="font-size:.8rem;color:var(--muted);margin-bottom:12px"></div>
         <div id="users-list"></div>
-        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border)" id="invite-section">
-          <div class="param-row">
-            <div class="param-label">เพิ่มผู้ใช้ใหม่ (email ที่สมัครแล้ว)</div>
-          </div>
-          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">
-            <input type="email" id="invite-email" placeholder="user@company.com" style="flex:1;min-width:180px">
-            <select id="invite-role" style="width:130px">
-              <option value="manager">Manager</option>
-              <option value="operator" selected>Operator</option>
-              <option value="viewer">Viewer</option>
-            </select>
-            <button class="btn" onclick="inviteUser()">+ เพิ่ม</button>
-          </div>
-          <div style="font-size:.72rem;color:var(--muted);margin-top:6px">
-            Admin — แก้ไขได้ทุกอย่าง รวมถึงจัดการผู้ใช้ |
-            Manager — แก้ค่าพารามิเตอร์ได้ |
-            Operator — ดูและส่ง Command ได้ |
-            Viewer — ดูอย่างเดียว
-          </div>
+        <div style="margin-top:16px;padding-top:16px;border-top:1px solid var(--border);font-size:.72rem;color:var(--muted)">
+          สมาชิกใหม่ต้อง <b>สมัครสมาชิกเอง</b> ผ่านหน้า Login ด้วยชื่อบริษัทเดียวกัน แล้วรอ Admin กด "อนุมัติ" ที่นี่ ·
+          ผู้ที่เคยถูกลบออกไปแล้วพยายามล็อกอินอีกครั้ง จะถูกส่งคำขอกลับมาที่นี่ให้ Admin อนุมัติใหม่โดยอัตโนมัติ ·
+          Admin — แก้ไขได้ทุกอย่าง รวมถึงจัดการผู้ใช้ |
+          Manager — แก้ค่าพารามิเตอร์ได้ |
+          Operator — ดูและส่ง Command ได้ |
+          Viewer — ดูอย่างเดียว
         </div>
       </div>
     </div>
@@ -479,12 +676,14 @@ const db   = firebase.database();
 // STATE
 // ================================================================
 let currentUser      = null;
+let suppressAuthRedirect = false; // true ระหว่าง doSignup()/doCompleteProfile() กำลังเขียนข้อมูลบริษัท กันไม่ให้ onAuthStateChanged แย่งจังหวะ
 let currentDevice    = null;
 let dataListener     = null;
 let addressListener  = null;
 let commandListener  = null;
 let devicesListener  = null;
 let currentCompanyKey = null;   // companyKey ของ user ที่ login อยู่
+let currentCompanyName = null;  // ชื่อบริษัทที่แสดงผล
 
 
 function detachDeviceListeners() {
@@ -518,11 +717,158 @@ function detachUserListeners() {
 // AUTH UI
 // ================================================================
 function switchAuthTab(which) {
+  document.getElementById('google-signin-block').style.display = 'block';
+  document.getElementById('auth-tabs').style.display = 'flex';
   document.getElementById('tab-login').classList.toggle('active', which === 'login');
   document.getElementById('tab-signup').classList.toggle('active', which === 'signup');
   document.getElementById('form-login').style.display  = which === 'login'  ? 'block' : 'none';
   document.getElementById('form-signup').style.display = which === 'signup' ? 'block' : 'none';
+  document.getElementById('form-forgot').style.display = 'none';
+  document.getElementById('form-complete-profile').style.display = 'none';
+  document.getElementById('auth-title').textContent = which === 'login' ? 'เข้าสู่ระบบ' : 'สมัครสมาชิก';
+  document.getElementById('auth-subtitle').textContent = which === 'login'
+    ? 'ยินดีต้อนรับกลับ กรอกข้อมูลเพื่อเข้าใช้งาน'
+    : 'สร้างบัญชีองค์กรใหม่ หรือเข้าร่วมทีมที่มีอยู่';
   hideAuthMsg();
+}
+
+// ----- Forgot password flow -----
+function showForgotPassword() {
+  document.getElementById('google-signin-block').style.display = 'none';
+  document.getElementById('auth-tabs').style.display = 'none';
+  document.getElementById('form-login').style.display = 'none';
+  document.getElementById('form-signup').style.display = 'none';
+  document.getElementById('form-complete-profile').style.display = 'none';
+  document.getElementById('form-forgot').style.display = 'block';
+  document.getElementById('auth-title').textContent = 'รีเซ็ตรหัสผ่าน';
+  document.getElementById('auth-subtitle').textContent = 'กรอกอีเมลที่ใช้สมัคร เราจะส่งลิงก์ตั้งรหัสผ่านใหม่ให้';
+  const loginEmail = document.getElementById('login-email').value.trim();
+  if (loginEmail) document.getElementById('forgot-email').value = loginEmail;
+  hideAuthMsg();
+}
+function backToLogin() { switchAuthTab('login'); }
+
+// ----- Google sign-in -----
+async function doGoogleLogin() {
+  const btn = document.getElementById('btn-google');
+  setBtnLoading(btn, true);
+  hideAuthMsg();
+  try {
+    const provider = new firebase.auth.GoogleAuthProvider();
+    await auth.signInWithPopup(provider);
+    // ที่เหลือจัดการต่อใน onAuthStateChanged (เช็ค company / pending / removed เหมือน login ปกติ)
+  } catch (e) {
+    if (e.code !== 'auth/popup-closed-by-user' && e.code !== 'auth/cancelled-popup-request') {
+      showAuthMsg(translateAuthError(e.code), false);
+    }
+  } finally {
+    setBtnLoading(btn, false);
+  }
+}
+
+// ----- Complete profile: first-time Google sign-in ยังไม่มีบริษัท ต้องเลือกเข้าร่วม/สร้างใหม่ -----
+function showCompleteProfile(user) {
+  document.getElementById('google-signin-block').style.display = 'none';
+  document.getElementById('auth-tabs').style.display = 'none';
+  document.getElementById('form-login').style.display = 'none';
+  document.getElementById('form-signup').style.display = 'none';
+  document.getElementById('form-forgot').style.display = 'none';
+  document.getElementById('form-complete-profile').style.display = 'block';
+  document.getElementById('auth-title').textContent = 'เกือบเสร็จแล้ว';
+  document.getElementById('auth-subtitle').textContent = 'ระบุชื่อบริษัทเพื่อเข้าร่วมหรือสร้างองค์กรใหม่';
+  document.getElementById('complete-profile-email').textContent = '👤 ' + user.email;
+  hideAuthMsg();
+}
+
+function cancelCompleteProfile() {
+  auth.signOut();
+  switchAuthTab('login');
+}
+
+async function doCompleteProfile() {
+  const user = currentUser;
+  if (!user) { switchAuthTab('login'); return; }
+  const companyRaw = document.getElementById('complete-company').value.trim();
+  if (!companyRaw) { showAuthMsg('กรุณากรอกชื่อบริษัท', false); return; }
+
+  const companyKey = companyRaw.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.#$\[\]/]/g, '_');
+  const btn = document.getElementById('btn-complete-profile');
+  setBtnLoading(btn, true);
+
+  try {
+    const snap = await db.ref('companies/' + companyKey + '/members').get();
+    const members = snap.val() || {};
+    const allMembers = Object.values(members);
+    const totalCount  = allMembers.length;
+    const activeCount = allMembers.filter(m => m.status === 'active').length;
+
+    if (totalCount === 0) {
+      const okNew = confirm(
+        'ยังไม่พบบริษัท "' + companyRaw + '" ในระบบ\n\n' +
+        'ถ้ากด OK จะสร้างบริษัทใหม่และคุณจะเป็น Admin คนแรก\n' +
+        'ถ้าตั้งใจจะเข้าร่วมบริษัทที่มีอยู่แล้ว ให้กด Cancel แล้วตรวจสอบว่าพิมพ์ชื่อบริษัทตรงกับที่ Admin คนแรกใช้สมัครหรือไม่'
+      );
+      if (!okNew) { setBtnLoading(btn, false); return; }
+    }
+
+    const limitSnap = await db.ref('companies/' + companyKey + '/config/userLimit').get();
+    const limit = limitSnap.val() || 5;
+    if (totalCount >= 20) { showAuthMsg('บริษัทนี้มีสมาชิกครบ 20 คนแล้ว', false); setBtnLoading(btn, false); return; }
+
+    const isFirstMember = totalCount === 0;
+    const newStatus = isFirstMember ? 'active' : (activeCount < limit ? 'pending' : 'pending');
+    const role = isFirstMember ? 'admin' : 'viewer';
+
+    await db.ref('companies/' + companyKey + '/members/' + user.uid).set({
+      email: user.email, role: role, status: newStatus, joinedAt: Date.now(), via: 'google'
+    });
+    await db.ref('users/' + user.uid).set({
+      company: companyKey, companyName: companyRaw, status: newStatus
+    });
+
+    if (isFirstMember) {
+      showAuthMsg('สร้างบริษัทสำเร็จ กำลังเข้าสู่ระบบ...', true);
+      location.reload();
+    } else {
+      showAuthMsg('ส่งคำขอเข้าร่วมแล้ว กรุณารอ Admin อนุมัติ', true);
+      setTimeout(() => auth.signOut(), 1800);
+    }
+  } catch (e) {
+    console.error('doCompleteProfile error:', e);
+    showAuthMsg('เกิดข้อผิดพลาด: ' + (e.message || e.code), false);
+  } finally {
+    setBtnLoading(btn, false);
+  }
+}
+
+async function doForgotPassword() {
+  const email = document.getElementById('forgot-email').value.trim();
+  if (!email) { showAuthMsg('กรุณากรอกอีเมล', false); return; }
+  const btn = document.getElementById('btn-forgot');
+  setBtnLoading(btn, true);
+  try {
+    await auth.sendPasswordResetEmail(email);
+    showAuthMsg('ส่งลิงก์รีเซ็ตรหัสผ่านไปที่ ' + email + ' แล้ว กรุณาตรวจสอบอีเมล', true);
+  } catch(e) {
+    showAuthMsg(translateAuthError(e.code), false);
+  } finally {
+    setBtnLoading(btn, false);
+  }
+}
+
+// ----- Password show/hide toggle -----
+function togglePw(inputId, btn) {
+  const input = document.getElementById(inputId);
+  const show = input.type === 'password';
+  input.type = show ? 'text' : 'password';
+  btn.textContent = show ? '🙈' : '👁';
+}
+
+// ----- Button loading state -----
+function setBtnLoading(btn, loading) {
+  if (!btn) return;
+  btn.disabled = loading;
+  btn.classList.toggle('loading', loading);
 }
 
 function showAuthMsg(msg, ok) {
@@ -534,12 +880,18 @@ function showAuthMsg(msg, ok) {
 function hideAuthMsg() { document.getElementById('auth-msg').style.display = 'none'; }
 
 function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-password').value;
+  const email    = document.getElementById('login-email').value.trim();
+  const pass     = document.getElementById('login-password').value;
+  const remember = document.getElementById('login-remember').checked;
   if (!email || !pass) { showAuthMsg('กรุณากรอก Email และ Password', false); return; }
-  auth.signInWithEmailAndPassword(email, pass)
+  const btn = document.getElementById('btn-login');
+  setBtnLoading(btn, true);
+  const persistence = remember ? firebase.auth.Auth.Persistence.LOCAL : firebase.auth.Auth.Persistence.SESSION;
+  auth.setPersistence(persistence)
+    .then(() => auth.signInWithEmailAndPassword(email, pass))
     .then(() => writeAuditLog && writeAuditLog('login', ''))
-    .catch(e => showAuthMsg(translateAuthError(e.code), false));
+    .catch(e => showAuthMsg(translateAuthError(e.code), false))
+    .finally(() => setBtnLoading(btn, false));
 }
 
 // ================================================================
@@ -556,7 +908,11 @@ async function doSignup() {
   if (pass.length < 6) { showAuthMsg('Password ต้องมีอย่างน้อย 6 ตัวอักษร', false); return; }
   if (pass !== pass2)  { showAuthMsg('Password ไม่ตรงกัน', false); return; }
 
-  const companyKey = company.replace(/[.#$\[\]/]/g, '_');
+  // normalize เพื่อกันปัญหาสะกด/เว้นวรรค/ตัวพิมพ์เล็ก-ใหญ่ไม่ตรงกัน ทำให้หลุดไปคนละบริษัท
+  const companyKey = company.trim().toLowerCase().replace(/\s+/g, ' ').replace(/[.#$\[\]/]/g, '_');
+  const btn = document.getElementById('btn-signup');
+  setBtnLoading(btn, true);
+  suppressAuthRedirect = true;
   showAuthMsg('กำลังตรวจสอบ...', true);
 
   try {
@@ -573,6 +929,26 @@ async function doSignup() {
     const activeCount = allMembers.filter(m => m.status === 'active').length;
     const totalCount  = allMembers.length;
 
+    // กันพลาด: ถ้าไม่พบบริษัทนี้เลย (สะกดชื่อไม่ตรงกับที่ Admin ใช้) ให้เตือนก่อนสร้างบริษัทใหม่
+    if (totalCount === 0) {
+      const okNew = confirm(
+        'ยังไม่พบบริษัท "' + company + '" ในระบบ\n\n' +
+        'ถ้ากด OK จะสร้างบริษัทใหม่และคุณจะเป็น Admin คนแรก\n' +
+        'ถ้าตั้งใจจะเข้าร่วมบริษัทที่มีอยู่แล้ว ให้กด Cancel แล้วตรวจสอบว่าพิมพ์ชื่อบริษัทตรงกับที่ Admin คนแรกใช้สมัครหรือไม่'
+      );
+      if (!okNew) {
+        await cred.user.delete();
+        showAuthMsg('ยกเลิกแล้ว กรุณาตรวจสอบชื่อบริษัทให้ตรงกับที่มีอยู่แล้ว แล้วลองใหม่', false);
+        setBtnLoading(btn, false);
+        return;
+      }
+    }
+
+    const activeMembers = allMembers.filter(m => m.status === 'active');
+    if (activeMembers.length >= 5) {
+      await auth.signOut();
+      showAuthMsg('บริษัทนี้มีสมาชิก active ครบ 5 คนแล้ว ไม่สามารถสมัครเพิ่มได้', false); return;
+    }
     if (totalCount >= 20) {
       await auth.signOut();
       showAuthMsg('บริษัทนี้มีสมาชิกครบ 20 คนแล้ว', false); return;
@@ -599,7 +975,8 @@ async function doSignup() {
     });
 
     if (isFirstMember) {
-      showAuthMsg('สมัครสำเร็จ! คุณเป็น Admin คนแรกของบริษัทนี้ 🎉', true);
+      showAuthMsg('สมัครสำเร็จ! คุณเป็น Admin คนแรกของบริษัทนี้ 🎉 กำลังเข้าสู่ระบบ...', true);
+      setTimeout(() => location.reload(), 1200);
     } else {
       showAuthMsg('สมัครสำเร็จ! รอ Admin ของบริษัทอนุมัติก่อนจึงจะเข้าใช้ได้ ⏳', true);
       setTimeout(() => auth.signOut(), 2500);
@@ -609,12 +986,16 @@ async function doSignup() {
     const msg = translateAuthError(e.code);
     showAuthMsg(msg !== ('เกิดข้อผิดพลาด: ' + e.code) ? msg : (e.message || 'เกิดข้อผิดพลาด'), false);
     console.error('Signup error:', e.code, e.message);
+  } finally {
+    suppressAuthRedirect = false;
+    setBtnLoading(btn, false);
   }
 }
 
 function doLogout() {
   detachDeviceListeners();
   detachUserListeners();
+  detachUsersPageListener();
   currentDevice = null;
   auth.signOut();
 }
@@ -628,6 +1009,10 @@ function translateAuthError(code) {
     'auth/wrong-password':       'Password ไม่ถูกต้อง',
     'auth/invalid-credential':   'Email หรือ Password ไม่ถูกต้อง',
     'auth/too-many-requests':    'พยายามเข้าระบบผิดหลายครั้ง กรุณารอสักครู่',
+    'auth/unauthorized-domain':  'โดเมนนี้ยังไม่ได้รับอนุญาตให้ใช้ Google Sign-in — แจ้งผู้ดูแลระบบให้เพิ่มโดเมนนี้ใน Firebase Console (Authentication → Settings → Authorized domains)',
+    'auth/operation-not-allowed':'ยังไม่ได้เปิดใช้งาน Google Sign-in — แจ้งผู้ดูแลระบบให้เปิด Google provider ใน Firebase Console (Authentication → Sign-in method)',
+    'auth/popup-blocked':        'เบราว์เซอร์บล็อกป๊อปอัป กรุณาอนุญาตป๊อปอัปสำหรับเว็บนี้แล้วลองใหม่',
+    'auth/network-request-failed': 'เชื่อมต่อเครือข่ายไม่สำเร็จ กรุณาตรวจสอบอินเทอร์เน็ต',
   };
   return map[code] || ('เกิดข้อผิดพลาด: ' + code);
 }
@@ -638,14 +1023,22 @@ function translateAuthError(code) {
 auth.onAuthStateChanged(async user => {
   if (user) {
     currentUser = user;
-    document.getElementById('auth-screen').style.display = 'none';
-    document.getElementById('app').style.display = 'block';
     document.getElementById('user-email').textContent = user.email;
     setBadge('fb', true, 'Firebase: OK');
 
     // โหลด companyKey ของ user นี้
     const snap = await db.ref('users/' + user.uid + '/company').get();
     currentCompanyKey = snap.val() || null;
+
+    // ยังไม่มีบริษัทเลย (เช่น เพิ่งสมัครครั้งแรกผ่าน Google) → ให้กรอกชื่อบริษัทก่อน
+    if (!currentCompanyKey) {
+      if (suppressAuthRedirect) return; // doSignup()/doCompleteProfile() กำลังเขียนข้อมูลอยู่ รอรอบถัดไป
+      showCompleteProfile(user);
+      return;
+    }
+
+    document.getElementById('auth-screen').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
 
     // แสดง companyName ใน topbar
     const nameSnap = await db.ref('users/' + user.uid + '/companyName').get();
@@ -666,18 +1059,38 @@ auth.onAuthStateChanged(async user => {
         auth.signOut();
         return;
       }
+      if (memberStatus === 'removed') {
+        // ผู้ที่เคยถูกลบออก แล้วพยายามล็อกอินอีกครั้ง — ส่งคำขอกลับเข้าใหม่แบบอัตโนมัติ
+        // (เปลี่ยนสถานะเป็น pending) ให้ Admin เห็นในหน้า "จัดการผู้ใช้" แล้วกดอนุมัติเอง
+        // ไม่ต้องให้สมัครบัญชีใหม่
+        try {
+          await db.ref('companies/' + currentCompanyKey + '/members/' + user.uid).update({
+            status: 'pending', reRequestedAt: Date.now()
+          });
+          await db.ref('users/' + user.uid + '/status').set('pending');
+          showAuthMsg('คุณเคยถูกลบออกจากองค์กรนี้ ระบบได้ส่งคำขอเข้าระบบใหม่ให้ Admin แล้ว กรุณารอการอนุมัติ', false);
+        } catch (e) {
+          console.error('re-request access error:', e);
+          showAuthMsg('บัญชีของคุณถูกลบออกจากองค์กร และไม่สามารถส่งคำขอใหม่ได้ กรุณาติดต่อ Admin', false);
+        }
+        document.getElementById('auth-screen').style.display = 'flex';
+        document.getElementById('app').style.display = 'none';
+        auth.signOut();
+        return;
+      }
     }
 
     loadUserDevices();
     await loadCompanyConfig();
     await loadCurrentUserRole();
-    await checkPendingInvite();
     await loadAlertRules();
     await checkSuperAdmin();
     startAlertMonitor();
+    startMembershipWatch(); // เฝ้าดู status แบบ real-time
   } else {
     detachDeviceListeners();
     detachUserListeners();
+  detachUsersPageListener();
     currentUser = null;
     currentDevice = null;
     currentCompanyKey = null;
@@ -691,6 +1104,7 @@ auth.onAuthStateChanged(async user => {
 // ================================================================
 function loadUserDevices() {
   detachUserListeners();
+  detachUsersPageListener();
   devicesListener = snap => {
     const devices = snap.val() || {};
     renderDeviceSelector(devices);
@@ -734,9 +1148,15 @@ function renderDeviceList(devices) {
     return;
   }
   el.innerHTML = keys.map(devId => `
-    <div class="param-row">
-      <div class="param-label">${devices[devId].name || devId} <small>${devId}</small></div>
-      <div class="param-action"><button class="btn" style="background:var(--danger);" onclick="removeDevice('${devId}')">ลบ</button></div>
+    <div class="list-row">
+      <div class="avatar">📟</div>
+      <div class="list-row-main">
+        <div class="list-row-primary">${devices[devId].name || devId}</div>
+        <div class="list-row-secondary">ID: ${devId}</div>
+      </div>
+      <div class="list-row-meta">
+        <button class="btn btn-outline-danger" onclick="removeDevice('${devId}')">ลบ</button>
+      </div>
     </div>
   `).join('');
 }
@@ -1117,16 +1537,20 @@ async function loadAuditLog() {
   const snap = await db.ref('companies/' + currentCompanyKey + '/auditLog')
     .orderByChild('ts').limitToLast(100).get();
   const container = document.getElementById('audit-list');
-  if (!snap.val()) { container.innerHTML = '<div style="color:var(--muted);font-size:.82rem">ยังไม่มี log</div>'; return; }
+  if (!snap.val()) { container.innerHTML = '<div class="list-empty">📋 ยังไม่มี log</div>'; return; }
   const entries = Object.values(snap.val()).reverse();
   container.innerHTML = entries.map(e => {
     const d = new Date(e.ts);
     const t = d.toLocaleDateString('th') + ' ' + d.toLocaleTimeString('th', {hour:'2-digit',minute:'2-digit'});
-    return `<div class="audit-row">
-      <span class="audit-time">${t}</span>
-      <span class="audit-user">${e.email||e.uid}</span>
-      <span class="role-badge role-${e.role||'viewer'}" style="margin-right:6px">${(e.role||'viewer').toUpperCase()}</span>
-      <span class="audit-action"><b>${e.action}</b>${e.detail?' — '+e.detail:''} ${e.device&&e.device!=='-'?'['+e.device+']':''}</span>
+    const who = e.email || e.uid || '?';
+    const initial = who.charAt(0);
+    return `<div class="list-row">
+      <span class="list-row-time">${t}</span>
+      <div class="avatar">${initial}</div>
+      <div class="list-row-main">
+        <div class="list-row-primary"><span class="email">${who}</span><span class="role-badge role-${e.role||'viewer'}">${(e.role||'viewer').toUpperCase()}</span></div>
+        <div class="list-row-secondary"><b>${e.action}</b>${e.detail?' — '+e.detail:''} ${e.device&&e.device!=='-'?'['+e.device+']':''}</div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1134,51 +1558,105 @@ async function loadAuditLog() {
 // ================================================================
 // ENTERPRISE — USER MANAGEMENT
 // ================================================================
-async function loadUsersPage() {
+let usersListener = null;
+let usersListenerCompanyKey = null;
+
+function loadUsersPage() {
   if (!can('manage_users')) return;
-  const snap = await db.ref('companies/' + currentCompanyKey + '/members').get();
-  const members = snap.val() || {};
+  // ถ้ามี listener ค้างของบริษัทเดิมอยู่แล้ว ไม่ต้องผูกซ้ำ
+  if (usersListener && usersListenerCompanyKey === currentCompanyKey) return;
+  detachUsersPageListener();
+  usersListenerCompanyKey = currentCompanyKey;
+  usersListener = db.ref('companies/' + currentCompanyKey + '/members')
+    .on('value', snap => renderUsersList(snap.val() || {}), err => {
+      console.error('loadUsersPage listener error:', err);
+      showToast('⚠ โหลดรายชื่อผู้ใช้ไม่สำเร็จ: ' + err.message, 'danger');
+    });
+}
+
+function detachUsersPageListener() {
+  if (usersListener && usersListenerCompanyKey) {
+    db.ref('companies/' + usersListenerCompanyKey + '/members').off('value', usersListener);
+  }
+  usersListener = null;
+  usersListenerCompanyKey = null;
+}
+
+function renderUsersList(members) {
   const list = document.getElementById('users-list');
   const quota = document.getElementById('users-quota');
-  const count = Object.keys(members).length;
+  if (!list) return;
+  const activeCount2 = Object.values(members).filter(m => m.status === 'active').length;
   const limit = companyUserLimit;
-  quota.textContent = 'ใช้ไปแล้ว ' + count + ' / ' + limit + ' บัญชี';
+  quota.textContent = 'Active ' + activeCount2 + ' / ' + limit + ' บัญชี';
 
   // แยก pending กับ active
-  const pendingMembers = Object.entries(members).filter(([,m]) => m.status === 'pending');
-  const activeMembers  = Object.entries(members).filter(([,m]) => m.status !== 'pending');
+  const pendingMembers  = Object.entries(members).filter(([,m]) => m.status === 'pending');
+  const activeMembers   = Object.entries(members).filter(([,m]) => m.status === 'active');
+  const removedMembers  = Object.entries(members).filter(([,m]) => m.status === 'removed');
 
   let html = '';
 
   if (pendingMembers.length) {
-    html += `<div style="font-size:.78rem;font-weight:600;color:var(--warn);margin-bottom:8px;padding:6px 10px;background:rgba(251,191,36,.08);border-radius:6px;border-left:3px solid var(--warn)">
-      ⏳ รออนุมัติ (${pendingMembers.length} คน)</div>`;
-    html += pendingMembers.map(([uid, m]) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
-        <div style="flex:1;font-size:.85rem;color:var(--warn)">${m.email||uid}</div>
-        <select id="role-pending-${uid}" style="width:110px;font-size:.78rem">
-          <option value="manager">Manager</option>
-          <option value="operator" selected>Operator</option>
-          <option value="viewer">Viewer</option>
-        </select>
-        <button class="btn" style="font-size:.72rem;background:var(--success);color:#000" onclick="approveUser('${uid}','${m.email||uid}')">✓ อนุมัติ</button>
-        <button class="btn" style="font-size:.72rem;background:var(--danger)" onclick="rejectUser('${uid}','${m.email||uid}')">✗ ปฏิเสธ</button>
-      </div>`).join('');
+    html += `<div class="list-section-label warn">⏳ รออนุมัติ <span class="count">${pendingMembers.length} คน</span></div>`;
+    html += pendingMembers.map(([uid, m]) => {
+      const email = m.email || uid;
+      return `<div class="list-row is-pending" data-uid="${uid}" id="pending-row-${uid}">
+        <div class="avatar warn">${email.charAt(0)}</div>
+        <div class="list-row-main">
+          <div class="list-row-primary"><span class="email">${email}</span></div>
+          <div class="list-row-secondary">รอ Admin อนุมัติเพื่อเข้าใช้งาน</div>
+        </div>
+        <div class="list-row-meta" id="pending-action-${uid}">
+          <button class="btn" style="background:var(--success);color:#000" onclick="showApproveOptions('${uid}','${email}')">✓ อนุมัติ</button>
+          <button class="btn" style="background:var(--danger)" onclick="rejectUser('${uid}','${email}')">✗ ปฏิเสธ</button>
+        </div>
+      </div>`;
+    }).join('');
   }
 
-  html += `<div style="font-size:.78rem;font-weight:600;color:var(--muted);margin:12px 0 8px">✅ สมาชิกที่ใช้งานได้ (${activeMembers.length} คน)</div>`;
-  html += activeMembers.map(([uid, m]) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
-      <div style="flex:1;font-size:.85rem">${m.email||uid}</div>
-      <span class="role-badge role-${m.role||'viewer'}">${(m.role||'viewer').toUpperCase()}</span>
-      <select onchange="changeRole('${uid}',this.value)" style="width:110px;font-size:.78rem" ${uid===currentUser.uid?'disabled':''}>
-        <option value="admin"    ${m.role==='admin'   ?'selected':''}>Admin</option>
-        <option value="manager"  ${m.role==='manager' ?'selected':''}>Manager</option>
-        <option value="operator" ${m.role==='operator'?'selected':''}>Operator</option>
-        <option value="viewer"   ${m.role==='viewer'  ?'selected':''}>Viewer</option>
-      </select>
-      ${uid!==currentUser.uid?`<button class="btn" style="font-size:.72rem;color:var(--danger)" onclick="removeUser('${uid}','${m.email||uid}')">ลบ</button>`:'<span style="font-size:.72rem;color:var(--muted)">(คุณ)</span>'}
-    </div>`).join('');
+  if (removedMembers.length) {
+    html += `<div class="list-section-label danger" style="margin-top:14px">🗑 ถูกลบ <span class="count">${removedMembers.length} คน — เข้าไม่ได้จนกว่าจะสมัครใหม่</span></div>`;
+    html += removedMembers.map(([uid, m]) => {
+      const email = m.email || uid;
+      return `<div class="list-row is-removed strike">
+        <div class="avatar muted">${email.charAt(0)}</div>
+        <div class="list-row-main">
+          <div class="list-row-primary"><span class="email">${email}</span></div>
+          <div class="list-row-secondary">ถูกลบโดย ${m.removedBy||'admin'}</div>
+        </div>
+        <div class="list-row-meta">
+          <button class="btn btn-outline-danger" onclick="permanentDeleteUser('${uid}','${email}')">🗑 ลบถาวร</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  html += `<div class="list-section-label success" style="margin-top:14px">✅ สมาชิกที่ใช้งานได้ <span class="count">${activeMembers.length} คน</span></div>`;
+  html += activeMembers.map(([uid, m]) => {
+    const email = m.email || uid;
+    const isMe = currentUser && uid === currentUser.uid;
+    return `<div class="list-row">
+      <div class="avatar">${email.charAt(0)}</div>
+      <div class="list-row-main">
+        <div class="list-row-primary"><span class="email">${email}</span><span class="role-badge role-${m.role||'viewer'}">${(m.role||'viewer').toUpperCase()}</span></div>
+        ${isMe?'<div class="list-row-secondary">นี่คือบัญชีของคุณ</div>':''}
+      </div>
+      <div class="list-row-meta">
+        <select onchange="changeRole('${uid}',this.value)" style="width:110px" ${isMe?'disabled':''}>
+          <option value="admin"    ${m.role==='admin'   ?'selected':''}>Admin</option>
+          <option value="manager"  ${m.role==='manager' ?'selected':''}>Manager</option>
+          <option value="operator" ${m.role==='operator'?'selected':''}>Operator</option>
+          <option value="viewer"   ${m.role==='viewer'  ?'selected':''}>Viewer</option>
+        </select>
+        ${!isMe?`<button class="btn btn-outline-danger" onclick="removeUser('${uid}','${email}')">ลบ</button>`:''}
+      </div>
+    </div>`;
+  }).join('');
+
+  if (!pendingMembers.length && !removedMembers.length && !activeMembers.length) {
+    html = '<div class="list-empty">👥 ยังไม่มีสมาชิกในองค์กร</div>';
+  }
 
   list.innerHTML = html;
 }
@@ -1189,72 +1667,108 @@ async function changeRole(uid, role) {
   logInfo('เปลี่ยน role สำเร็จ');
 }
 
-async function removeUser(uid, email) {
-  if (!confirm('ลบ ' + email + ' ออกจากองค์กร?')) return;
+async function permanentDeleteUser(uid, email) {
+  if (!confirm('ลบ ' + email + ' ออกถาวร?\n\nผู้ใช้จะต้องสมัครด้วย Email ใหม่เท่านั้น')) return;
+  // ลบออกจาก members และ users ทั้งหมด
   await db.ref('companies/' + currentCompanyKey + '/members/' + uid).remove();
-  await writeAuditLog('remove_user', email);
+  await db.ref('users/' + uid).remove();
+  await writeAuditLog('permanent_delete_user', email);
+  showToast('🗑 ลบ ' + email + ' ออกถาวรแล้ว — ต้องสมัคร Email ใหม่', 'danger');
   loadUsersPage();
+  // membership watcher จะ kick user ออกอัตโนมัติถ้า user นั้น login อยู่
 }
 
-async function inviteUser() {
-  if (!can('manage_users')) { logInfo('ไม่มีสิทธิ์'); return; }
-  const email = document.getElementById('invite-email').value.trim();
-  const role  = document.getElementById('invite-role').value;
-  if (!email) { logInfo('กรอก email ก่อน'); return; }
-
-  // หา UID จาก email โดยตรวจ users collection
-  const usersSnap = await db.ref('companies/' + currentCompanyKey + '/members').get();
-  const members = usersSnap.val() || {};
-  const count = Object.keys(members).length;
-  if (count >= companyUserLimit) { logInfo('ครบ quota ' + companyUserLimit + ' คนแล้ว'); return; }
-
-  // สร้าง pending invite แทน (ผู้ใช้ต้อง login ด้วย email นั้นแล้วระบบจะ assign role)
-  const inviteKey = email.replace(/[.#$\[\]/]/g, '_');
-  await db.ref('companies/' + currentCompanyKey + '/pendingInvites/' + inviteKey).set({
-    email: email, role: role, invitedBy: currentUser.email, invitedAt: Date.now()
+async function removeUser(uid, email) {
+  if (!confirm('ลบ ' + email + ' ออกจากองค์กร?\n\nผู้ใช้จะเข้าระบบไม่ได้จนกว่าจะสมัครใหม่และรอ Admin อนุมัติ')) return;
+  await db.ref('companies/' + currentCompanyKey + '/members/' + uid).update({
+    status: 'removed', removedBy: currentUser.email, removedAt: Date.now()
   });
-  await writeAuditLog('invite_user', email + ' as ' + role);
-  document.getElementById('invite-email').value = '';
-  logInfo('ส่ง invite ให้ ' + email + ' แล้ว — ให้เขาสมัครด้วย email นี้');
-}
-
-// เช็ค pending invite ตอน login
-async function checkPendingInvite() {
-  if (!currentUser || !currentCompanyKey) return;
-  const emailKey = currentUser.email.replace(/[.#$\[\]/]/g, '_');
-  const snap = await db.ref('companies/' + currentCompanyKey + '/pendingInvites/' + emailKey).get();
-  if (!snap.val()) return;
-  const inv = snap.val();
-  // Assign role
-  await db.ref('companies/' + currentCompanyKey + '/members/' + currentUser.uid + '/role').set(inv.role);
-  // Remove invite
-  await db.ref('companies/' + currentCompanyKey + '/pendingInvites/' + emailKey).remove();
-  currentUserRole = inv.role;
-  logInfo('ได้รับสิทธิ์ ' + inv.role + ' จาก ' + inv.invitedBy);
+  await db.ref('users/' + uid + '/status').set('removed');
+  await writeAuditLog('remove_user', email);
+  showToast('🗑 ลบ ' + email + ' แล้ว', 'danger');
+  loadUsersPage();
 }
 
 // ================================================================
 // ENTERPRISE — APPROVE / REJECT PENDING MEMBERS
 // ================================================================
+function showApproveOptions(uid, email) {
+  const actionDiv = document.getElementById('pending-action-' + uid);
+  if (!actionDiv) return;
+  actionDiv.innerHTML = `
+    <span style="font-size:.78rem;color:var(--muted)">เลือก Role:</span>
+    <select id="role-pending-${uid}" style="width:110px;font-size:.78rem">
+      <option value="manager">Manager</option>
+      <option value="operator" selected>Operator</option>
+      <option value="viewer">Viewer</option>
+      <option value="admin">Admin</option>
+    </select>
+    <button class="btn" style="font-size:.78rem;background:var(--success);color:#000" onclick="approveUser('${uid}','${email}')">✓ ยืนยัน</button>
+    <button class="btn" style="font-size:.78rem;background:var(--surface);color:var(--muted)" onclick="loadUsersPage()">ยกเลิก</button>
+  `;
+}
+
 async function approveUser(uid, email) {
   const role = document.getElementById('role-pending-' + uid)?.value || 'operator';
+
+  // เช็ค quota อีกครั้งก่อนอนุมัติ (ป้องกัน race condition)
+  const snap = await db.ref('companies/' + currentCompanyKey + '/members').get();
+  const members = snap.val() || {};
+  const activeNow = Object.values(members).filter(m => m.status === 'active').length;
+  const limit = companyUserLimit || 5;
+
+  if (activeNow >= limit) {
+    showToast('⚠️ Active ครบ ' + limit + ' คนแล้ว อนุมัติไม่ได้', 'danger');
+    logInfo('อนุมัติไม่ได้ — active เต็ม ' + limit + ' คนแล้ว');
+    loadUsersPage();
+    return;
+  }
+
+  // แสดง loading บนแถวนั้นทันที
+  const row = document.querySelector(`[data-uid="${uid}"]`);
+  if (row) { row.style.opacity = '0.4'; row.style.pointerEvents = 'none'; }
+
   await db.ref('companies/' + currentCompanyKey + '/members/' + uid).update({
     status: 'active', role: role, approvedBy: currentUser.email, approvedAt: Date.now()
   });
   await db.ref('users/' + uid + '/status').set('active');
   await writeAuditLog('approve_user', email + ' as ' + role);
+
+  showToast('✅ อนุมัติ ' + email + ' เป็น ' + role + ' แล้ว (' + (activeNow+1) + '/' + limit + ')', 'success');
   logInfo('อนุมัติ ' + email + ' เป็น ' + role + ' แล้ว');
   loadUsersPage();
 }
 
 async function rejectUser(uid, email) {
   if (!confirm('ปฏิเสธและลบ ' + email + ' ออกจากระบบ?')) return;
+
+  const row = document.querySelector(`[data-uid="${uid}"]`);
+  if (row) { row.style.opacity = '0.4'; row.style.pointerEvents = 'none'; }
+
   await db.ref('companies/' + currentCompanyKey + '/members/' + uid).remove();
   await db.ref('users/' + uid).remove();
-  // ลบออกจาก Firebase Auth ไม่ได้จาก client แต่ user จะเข้าไม่ได้เพราะไม่มีใน members
   await writeAuditLog('reject_user', email);
+
+  showToast('❌ ปฏิเสธ ' + email + ' แล้ว', 'danger');
   logInfo('ปฏิเสธ ' + email + ' แล้ว');
   loadUsersPage();
+}
+
+// Toast notification (ไม่ต้อง reload หน้า)
+function showToast(msg, type) {
+  let toast = document.getElementById('toast-notify');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'toast-notify';
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;z-index:9999;padding:12px 20px;border-radius:10px;font-size:.85rem;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.4);transition:opacity .3s;max-width:320px';
+    document.body.appendChild(toast);
+  }
+  toast.textContent = msg;
+  toast.style.background = type === 'success' ? 'var(--success)' : type === 'danger' ? 'var(--danger)' : 'var(--accent)';
+  toast.style.color = type === 'success' ? '#000' : '#fff';
+  toast.style.opacity = '1';
+  clearTimeout(toast._t);
+  toast._t = setTimeout(() => { toast.style.opacity = '0'; }, 3000);
 }
 
 // ================================================================
@@ -1300,15 +1814,17 @@ function renderAlertRules() {
   const list = document.getElementById('alert-rules-list');
   if (!list) return;
   const entries = Object.entries(alertRules);
-  if (!entries.length) { list.innerHTML = '<div style="color:var(--muted);font-size:.82rem;margin-bottom:10px">ยังไม่มี Alert Rule</div>'; return; }
+  if (!entries.length) { list.innerHTML = '<div class="list-empty">🚨 ยังไม่มี Alert Rule</div>'; return; }
   list.innerHTML = entries.map(([key, r]) => `
-    <div class="alert-row ${r.active?'alert-active':'alert-ok'}">
-      <div style="flex:1;font-size:.82rem">
-        <b>${r.param}</b> ${r.cond==='gt'?'>':'<'} <b>${r.val}</b>
-        <span style="color:var(--muted);margin-left:8px">[${r.channel||'dashboard'}]</span>
-        ${r.active?'<span style="color:var(--danger);margin-left:6px">🔴 กำลังแจ้งเตือน</span>':'<span style="color:var(--success);margin-left:6px">🟢 ปกติ</span>'}
+    <div class="list-row ${r.active?'is-danger':'is-ok'}">
+      <div class="avatar ${r.active?'danger':'muted'}">${r.active?'🔴':'🟢'}</div>
+      <div class="list-row-main">
+        <div class="list-row-primary"><b>${r.param}</b> ${r.cond==='gt'?'&gt;':'&lt;'} <b>${r.val}</b></div>
+        <div class="list-row-secondary">ช่องทาง: ${r.channel==='line'?'Line Notify':'Dashboard'} · ${r.active?'กำลังแจ้งเตือน':'สถานะปกติ'}</div>
       </div>
-      <button class="btn" style="font-size:.72rem" onclick="deleteAlertRule('${key}')">ลบ</button>
+      <div class="list-row-meta">
+        <button class="btn btn-outline-danger" onclick="deleteAlertRule('${key}')">ลบ</button>
+      </div>
     </div>`).join('');
 }
 
@@ -1388,15 +1904,18 @@ async function loadAlertHistory() {
     .orderByChild('ts').limitToLast(20).get();
   const list = document.getElementById('alert-history-list');
   if (!list) return;
-  if (!snap.val()) { list.innerHTML = '<div style="color:var(--muted);font-size:.82rem">ยังไม่มี Alert</div>'; return; }
+  if (!snap.val()) { list.innerHTML = '<div class="list-empty">🔔 ยังไม่มี Alert</div>'; return; }
   const entries = Object.values(snap.val()).reverse();
   list.innerHTML = entries.map(e => {
     const d = new Date(e.ts);
     const t = d.toLocaleDateString('th') + ' ' + d.toLocaleTimeString('th', {hour:'2-digit',minute:'2-digit'});
-    return `<div class="audit-row">
-      <span class="audit-time">${t}</span>
-      <span class="audit-user" style="color:var(--danger)">⚠ ${e.param}</span>
-      <span class="audit-action">${e.cond==='gt'?'>':'<'}${e.threshold} (วัดได้: <b>${e.actual}</b>) [${e.device}]</span>
+    return `<div class="list-row is-danger">
+      <span class="list-row-time">${t}</span>
+      <div class="avatar danger">⚠</div>
+      <div class="list-row-main">
+        <div class="list-row-primary"><b>${e.param}</b> ${e.cond==='gt'?'&gt;':'&lt;'} ${e.threshold}</div>
+        <div class="list-row-secondary">วัดได้ <b>${e.actual}</b> · บอร์ด [${e.device}]</div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -1441,6 +1960,63 @@ document.addEventListener('DOMContentLoaded', () => {
     if (row) row.style.display = ch.value === 'line' ? 'block' : 'none';
   });
 });
+
+// ================================================================
+// LOGIN SCREEN — live readout ticker (cosmetic preview of the dashboard)
+// ================================================================
+document.addEventListener('DOMContentLoaded', () => {
+  let pv = 82.4, sv = 85.0, mv = 61;
+  const elPv = document.getElementById('demo-pv');
+  const elSv = document.getElementById('demo-sv');
+  const elMv = document.getElementById('demo-mv');
+  if (!elPv) return;
+  setInterval(() => {
+    pv += (Math.random() - 0.45) * 0.6;
+    mv += (Math.random() - 0.5) * 4;
+    mv = Math.max(20, Math.min(95, mv));
+    elPv.textContent = pv.toFixed(1) + '°';
+    elSv.textContent = sv.toFixed(1) + '°';
+    elMv.textContent = Math.round(mv) + '%';
+  }, 2200);
+});
+
+// ================================================================
+// MEMBERSHIP WATCH — เช็ค status แบบ real-time ถ้าถูกลบให้ออกทันที
+// ================================================================
+let membershipWatcher = null;
+
+function startMembershipWatch() {
+  if (!currentUser || !currentCompanyKey) return;
+  if (membershipWatcher) db.ref('companies/' + currentCompanyKey + '/members/' + currentUser.uid).off('value', membershipWatcher);
+
+  membershipWatcher = db.ref('companies/' + currentCompanyKey + '/members/' + currentUser.uid).on('value', snap => {
+    const member = snap.val();
+
+    // ถ้าถูกลบออกจาก members หรือ status ไม่ใช่ active
+    if (!member || member.status === 'removed' || member.status === 'pending') {
+      const msg = !member
+        ? 'บัญชีของคุณถูกลบออกจากองค์กรถาวร กรุณาสมัครด้วย Email ใหม่'
+        : member.status === 'removed'
+          ? 'บัญชีของคุณถูกลบออกจากองค์กร กรุณาสมัครใหม่เพื่อรอ Admin อนุมัติ'
+          : 'บัญชีของคุณยังรอ Admin อนุมัติ';
+
+      // ออกจากระบบทันที
+      if (membershipWatcher) {
+        db.ref('companies/' + currentCompanyKey + '/members/' + currentUser.uid).off('value', membershipWatcher);
+        membershipWatcher = null;
+      }
+      detachDeviceListeners();
+      detachUserListeners();
+  detachUsersPageListener();
+      auth.signOut().then(() => {
+        document.getElementById('app').style.display = 'none';
+        document.getElementById('auth-screen').style.display = 'flex';
+        showAuthMsg(msg, false);
+        switchAuthTab('login');
+      });
+    }
+  });
+}
 
 // ================================================================
 // COPY PROTECTION
