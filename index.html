@@ -482,7 +482,7 @@ select{cursor:pointer;font-family:'Prompt',sans-serif}
       <button class="icon-btn" onclick="exportCSV()" title="Export CSV">📥</button>
       <span class="user-chip" id="user-email">—</span>
       <div class="badge" id="badge-fb"><div class="badge-dot"></div><span id="badge-fb-txt">Firebase</span></div>
-      <div class="badge" id="badge-sdu"><div class="badge-dot"></div><span id="badge-sdu-txt">เชื่อมต่ออุปกรณ์</span></div>
+      <div class="badge" id="badge-sdu"><div class="badge-dot"></div><span id="badge-sdu-txt">อุปกรณ์:เชื่อมต่อแล้ว</span></div>
       <button class="logout-btn" onclick="doLogout()">ออกจากระบบ</button>
     </div>
   </header>
@@ -1507,7 +1507,7 @@ function listenToDeviceData() {
   const devDataPath = devBasePath + '/data';
   dataListener = db.ref(devDataPath).on('value', snap => {
     const d = snap.val();
-    if (!d) { setBadge('sdu', false, 'SDU440: ไม่มีข้อมูล'); return; }
+    if (!d) { setBadge('sdu', false, 'อุปกรณ์:ขาดการเชื่อมต่อ'); return; }
 
     setBadge('sdu', d.status === true, d.status ? 'SDU440: Online' : 'SDU440: Error');
     // Show chart card and init once
