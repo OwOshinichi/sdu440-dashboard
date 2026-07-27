@@ -477,12 +477,12 @@ select{cursor:pointer;font-family:'Prompt',sans-serif}
 <div class="layout">
 
   <header class="topbar">
-    <div class="topbar-logo">SDU440 <span>/ Dashboard</span></div>
+    <div class="topbar-logo">BKK <span>/ชื่อบริษัท</span></div>
     <div class="topbar-right">
       <button class="icon-btn" onclick="exportCSV()" title="Export CSV">📥</button>
       <span class="user-chip" id="user-email">—</span>
       <div class="badge" id="badge-fb"><div class="badge-dot"></div><span id="badge-fb-txt">Firebase</span></div>
-      <div class="badge" id="badge-sdu"><div class="badge-dot"></div><span id="badge-sdu-txt">SDU440</span></div>
+      <div class="badge" id="badge-sdu"><div class="badge-dot"></div><span id="badge-sdu-txt">เชื่อมต่ออุปกรณ์</span></div>
       <button class="logout-btn" onclick="doLogout()">ออกจากระบบ</button>
     </div>
   </header>
@@ -1195,7 +1195,7 @@ auth.onAuthStateChanged(async user => {
   if (user) {
     currentUser = user;
     document.getElementById('user-email').textContent = user.email;
-    setBadge('fb', true, 'Firebase: OK');
+    setBadge('fb', true, 'ออนไลน์');
 
     // โหลด companyKey ของ user นี้
     const snap = await db.ref('users/' + user.uid + '/company').get();
