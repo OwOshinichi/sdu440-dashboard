@@ -477,12 +477,12 @@ select{cursor:pointer;font-family:'Prompt',sans-serif}
 <div class="layout">
 
   <header class="topbar">
-    <div class="topbar-logo">BKK <span>/ชื่อบริษัท</span></div>
+    <div class="topbar-logo">SDU440 <span>/ Dashboard</span></div>
     <div class="topbar-right">
       <button class="icon-btn" onclick="exportCSV()" title="Export CSV">📥</button>
       <span class="user-chip" id="user-email">—</span>
       <div class="badge" id="badge-fb"><div class="badge-dot"></div><span id="badge-fb-txt">Firebase</span></div>
-      <div class="badge" id="badge-sdu"><div class="badge-dot"></div><span id="badge-sdu-txt">อุปกรณ์:เชื่อมต่อแล้ว</span></div>
+      <div class="badge" id="badge-sdu"><div class="badge-dot"></div><span id="badge-sdu-txt">SDU440</span></div>
       <button class="logout-btn" onclick="doLogout()">ออกจากระบบ</button>
     </div>
   </header>
@@ -1195,7 +1195,7 @@ auth.onAuthStateChanged(async user => {
   if (user) {
     currentUser = user;
     document.getElementById('user-email').textContent = user.email;
-    setBadge('fb', true, 'ออนไลน์');
+    setBadge('fb', true, 'Firebase: OK');
 
     // โหลด companyKey ของ user นี้
     const snap = await db.ref('users/' + user.uid + '/company').get();
@@ -1507,7 +1507,7 @@ function listenToDeviceData() {
   const devDataPath = devBasePath + '/data';
   dataListener = db.ref(devDataPath).on('value', snap => {
     const d = snap.val();
-    if (!d) { setBadge('sdu', false, 'อุปกรณ์:ขาดการเชื่อมต่อ'); return; }
+    if (!d) { setBadge('sdu', false, 'SDU440: ไม่มีข้อมูล'); return; }
 
     setBadge('sdu', d.status === true, d.status ? 'SDU440: Online' : 'SDU440: Error');
     // Show chart card and init once
